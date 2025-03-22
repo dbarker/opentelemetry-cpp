@@ -1,0 +1,119 @@
+name: CMake Install Tests
+
+on:
+  workflow_dispatch:
+
+jobs:
+  windows_2022_cmake_install_test:
+    name: Windows 2022 CMake install test
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Install Dependencies
+        run: ./ci/setup_windows_ci_environment.ps1
+      - name: Run Tests
+        run: ./ci/do_ci.ps1 cmake.install.test
+
+  windows_2019_dll_cmake_install_test:
+    name: Windows 2019 (DLL) CMake install test
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    - name: Install Dependencies
+      run: ./ci/setup_windows_ci_environment.ps1
+    - name: Run Tests
+      run: ./ci/do_ci.ps1 cmake.dll.install.test
+
+  windows_2019_cmake_install_test:
+    name: Windows 2019 CMake install test
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Install Dependencies
+        run: ./ci/setup_windows_ci_environment.ps1
+      - name: Run Tests
+        run: ./ci/do_ci.ps1 cmake.install.test
+
+  ubuntu_2404_cmake_install_test:
+    name: Ubuntu 24.04 CMake install test
+    runs-on: ubuntu-24.04
+    env:
+      INSTALL_TEST_DIR: '/home/runner/install_test'
+      CXX_STANDARD: '20'
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    - name: Setup CI Environment
+      run: |
+        sudo -E ./ci/setup_googletest.sh
+        sudo -E ./ci/setup_ci_environment.sh
+    - name: Install Dependencies
+      env:
+        ABSEIL_CPP_VERSION: '20240722.1'
+        PROTOBUF_VERSION: '29.0'
+        GRPC_VERSION: 'v1.71.0'
+      run: |
+        sudo -E ./ci/install_abseil.sh
+        sudo -E ./ci/install_protobuf.sh
+        sudo -E ./ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil
+    - name: Run Tests
+      run: ./ci/do_ci.sh cmake.install.test
+
+  ubuntu_2204_cmake_install_test:
+    name: Ubuntu 22.04 CMake install test
+    runs-on: ubuntu-22.04
+    env:
+      INSTALL_TEST_DIR: '/home/runner/install_test'
+      CXX_STANDARD: '17'
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    - name: Setup CI Environment
+      run: |
+        sudo -E ./ci/setup_googletest.sh
+        sudo -E ./ci/setup_ci_environment.sh
+    - name: Install Dependencies
+      env:
+        ABSEIL_CPP_VERSION: '20230125.3'
+        PROTOBUF_VERSION: '23.3'
+        GRPC_VERSION: 'v1.55.0'
+      run: |
+        sudo -E ./ci/install_abseil.sh
+        sudo -E ./ci/install_protobuf.sh
+        sudo -E ./ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil
+    - name: Run Tests
+      run: ./ci/do_ci.sh cmake.install.test
+
+  ubuntu_2004_cmake_install_test:
+    name: Ubuntu 20.04 CMake install test
+    runs-on: ubuntu-20.04
+    env:
+      INSTALL_TEST_DIR: '/home/runner/install_test'
+      CXX_STANDARD: '14'
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    - name: Setup CI Environment
+      run: |
+        sudo -E ./ci/setup_googletest.sh
+        sudo -E ./ci/setup_ci_environment.sh
+    - name: Install Dependencies
+      env:
+        ABSEIL_CPP_VERSION: '20220623.2'
+        PROTOBUF_VERSION: '21.12'
+        GRPC_VERSION: 'v1.49.2'
+      run: |
+        sudo -E ./ci/install_abseil.sh
+        sudo -E ./ci/install_protobuf.sh
+        sudo -E ./ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil
+    - name: Run Tests
+      run: ./ci/do_ci.sh cmake.install.test
