@@ -242,10 +242,23 @@ elif [[ "$1" == "cmake.opentracing_shim.test" ]]; then
   make test
   make install
   export LD_LIBRARY_PATH="${INSTALL_TEST_DIR}/lib:$LD_LIBRARY_PATH"
+  CMAKE_OPTIONS_STRING=$(IFS=" "; echo "${CMAKE_OPTIONS[*]}")
+  EXPECTED_COMPONENTS=(
+    "api"
+    "sdk"
+    "ext_common"
+    "ext_http_curl"
+    "exporters_in_memory"
+    "exporters_ostream"
+    "shims_opentracing"
+  )
+  EXPECTED_COMPONENTS_STRING=$(IFS=\;; echo "${EXPECTED_COMPONENTS[*]}")
   cmake -S "${SRC_DIR}/install/test/cmake" \
         -B "${BUILD_DIR}/install_test" \
+        "${CMAKE_OPTIONS[@]}" \
         "-DCMAKE_PREFIX_PATH=${INSTALL_TEST_DIR}" \
-        "-DCOMPONENTS_TO_TEST=shims_opentracing"
+        "-DINSTALL_TEST_CMAKE_OPTIONS=${CMAKE_OPTIONS_STRING}" \
+        "-DINSTALL_TEST_COMPONENTS=${EXPECTED_COMPONENTS}"
   ctest --test-dir "${BUILD_DIR}/install_test" --output-on-failure
   exit 0
 elif [[ "$1" == "cmake.c++20.test" ]]; then
@@ -428,9 +441,14 @@ elif [[ "$1" == "cmake.install.test" ]]; then
   rm -rf ${INSTALL_TEST_DIR}/*
   cmake "${CMAKE_OPTIONS[@]}"  \
         -DCMAKE_INSTALL_PREFIX=${INSTALL_TEST_DIR} \
-        -DWITH_ABSEIL=ON \
+        -DWITH_ABI_VERSION_1=OFF \
+        -DWITH_ABI_VERSION_2=ON \
+        -DWITH_ABSEIL=OFF \
         -DWITH_METRICS_EXEMPLAR_PREVIEW=ON \
         -DWITH_ASYNC_EXPORT_PREVIEW=ON \
+        -DWITH_THREAD_INSTRUMENTATION_PREVIEW=ON \
+        -DWITH_OTLP_GRPC_SSL_MTLS_PREVIEW=ON \
+        -DWITH_OTLP_RETRY_PREVIEW=ON \
         -DWITH_OTLP_GRPC=ON \
         -DWITH_OTLP_HTTP=ON \
         -DWITH_OTLP_FILE=ON \
@@ -442,12 +460,35 @@ elif [[ "$1" == "cmake.install.test" ]]; then
         -DOPENTELEMETRY_INSTALL=ON \
         "${SRC_DIR}"
   make -j $(nproc)
+  make test
   make install
   export LD_LIBRARY_PATH="${INSTALL_TEST_DIR}/lib:$LD_LIBRARY_PATH"
+
+  CMAKE_OPTIONS_STRING=$(IFS=" "; echo "${CMAKE_OPTIONS[*]}")
+
+  EXPECTED_COMPONENTS=(
+    "api"
+    "sdk"
+    "ext_common"
+    "ext_http_curl"
+    "exporters_in_memory"
+    "exporters_ostream"
+    "exporters_otlp_common"
+    "exporters_otlp_file"
+    "exporters_otlp_grpc"
+    "exporters_otlp_http"
+    "exporters_prometheus"
+    "exporters_elasticsearch"
+    "exporters_zipkin"
+  )
+  EXPECTED_COMPONENTS_STRING=$(IFS=\;; echo "${EXPECTED_COMPONENTS[*]}")
+
   cmake -S "${SRC_DIR}/install/test/cmake" \
         -B "${BUILD_DIR}/install_test" \
+         "${CMAKE_OPTIONS[@]}" \
          "-DCMAKE_PREFIX_PATH=${INSTALL_TEST_DIR}" \
-         "-DCOMPONENTS_TO_TEST=api;sdk;ext_common;ext_http_curl;exporters_in_memory;exporters_ostream;exporters_otlp_common;exporters_otlp_file;exporters_otlp_grpc;exporters_otlp_http;exporters_prometheus;exporters_elasticsearch;exporters_zipkin"
+         "-DINSTALL_TEST_CMAKE_OPTIONS=${CMAKE_OPTIONS_STRING}" \
+         "-DINSTALL_TEST_COMPONENTS=${EXPECTED_COMPONENTS_STRING}"
   ctest --test-dir "${BUILD_DIR}/install_test" --output-on-failure
   exit 0
 elif [[ "$1" == "cmake.test_example_plugin" ]]; then

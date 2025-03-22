@@ -41,7 +41,7 @@ if(@WITH_HTTP_CLIENT_CURL@ AND NOT "@BUILD_SHARED_LIBS@")
 endif()
 
 # nlohmann_json:
-if("@USE_NLOHMANN_JSON@" AND "@nlohmann_json_FOUND@")
+if("@USE_NLOHMANN_JSON@")
   set(BUILT_WITH_nlohmann_json TRUE)
 endif()
 
