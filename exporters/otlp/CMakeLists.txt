@@ -23,6 +23,12 @@ target_link_libraries(opentelemetry_otlp_recordable
 
 if(WITH_OTLP_GRPC)
   find_package(gRPC REQUIRED)
+
+  add_library(opentelemetry_grpc_headers INTERFACE)
+  target_include_directories(
+    opentelemetry_grpc_headers
+    INTERFACE "$<TARGET_PROPERTY:gRPC::grpc++,INTERFACE_INCLUDE_DIRECTORIES>")
+
   add_library(
     opentelemetry_exporter_otlp_grpc_client
     src/otlp_grpc_client.cc src/otlp_grpc_client_factory.cc
@@ -38,10 +44,12 @@ if(WITH_OTLP_GRPC)
   # targets that depend on opentelemetry_proto_grpc.
   target_link_libraries(
     opentelemetry_exporter_otlp_grpc_client
-    PUBLIC opentelemetry_sdk opentelemetry_common
+    PUBLIC opentelemetry_sdk
+           opentelemetry_common
            # gRPC::grpc++ must be linked before opentelemetry_proto_grpc.
-           opentelemetry_proto_grpc gRPC::grpc++
-    PRIVATE opentelemetry_ext)
+           opentelemetry_proto_grpc
+           opentelemetry_grpc_headers
+    PRIVATE gRPC::grpc++ opentelemetry_ext)
 
   target_include_directories(
     opentelemetry_exporter_otlp_grpc_client
@@ -49,7 +57,7 @@ if(WITH_OTLP_GRPC)
            "$<INSTALL_INTERFACE:include>")
 
   list(APPEND OPENTELEMETRY_OTLP_GRPC_TARGETS
-       opentelemetry_exporter_otlp_grpc_client)
+       opentelemetry_exporter_otlp_grpc_client opentelemetry_grpc_headers)
 
   add_library(
     opentelemetry_exporter_otlp_grpc
@@ -372,7 +380,7 @@ if(BUILD_TESTING)
     add_executable(otlp_grpc_exporter_test test/otlp_grpc_exporter_test.cc)
     target_link_libraries(
       otlp_grpc_exporter_test ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
-      ${GMOCK_LIB} opentelemetry_exporter_otlp_grpc)
+      ${GMOCK_LIB} opentelemetry_exporter_otlp_grpc gRPC::grpc++)
     gtest_add_tests(
       TARGET otlp_grpc_exporter_test
       TEST_PREFIX exporter.otlp.
