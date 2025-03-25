@@ -9,7 +9,7 @@ on:
 
 jobs:
   windows_2022_vcpkg:
-    name: Windows 2022 vcpkg cxx17 (static libs - dll - opentracing shim)
+    name: Windows 2022 vcpkg cxx17 (static libs - dll)
     runs-on: windows-2022
     env:
       CXX_STANDARD: '17'
@@ -23,8 +23,6 @@ jobs:
         run: ./ci/do_ci.ps1 cmake.install.test
       - name: Run DLL Tests
         run: ./ci/do_ci.ps1 cmake.dll.install.test
-      - name: Run OpenTracing Shim Test
-        run: ./ci/do_ci.sh cmake.opentracing_shim.install.test
 
   windows_2019_vcpkg:
     name: Windows 2019 vcpkg cxx14 (static libs)
@@ -69,7 +67,7 @@ jobs:
       run: ./ci/do_ci.sh cmake.install.test
 
   ubuntu_2404_script_build_grpc_1_71_0:
-    name: Ubuntu 24.04 script build grpc 1.71.0 cxx17 (static libs)
+    name: Ubuntu 24.04 script grpc 1.71.0 cxx17 (static libs)
     runs-on: ubuntu-24.04
     env:
       INSTALL_TEST_DIR: '/home/runner/install_test'
@@ -98,7 +96,7 @@ jobs:
       run: ./ci/do_ci.sh cmake.install.test
 
   ubuntu_2204_script_build_grpc_1_55_0:
-    name: Ubuntu 22.04 script_build grpc 1.55.0 cxx17 (static libs - shared libs)
+    name: Ubuntu 22.04 script grpc 1.55.0 cxx17 (static libs - shared libs)
     runs-on: ubuntu-22.04
     env:
       INSTALL_TEST_DIR: '/home/runner/install_test'
@@ -131,7 +129,7 @@ jobs:
       run: ./ci/do_ci.sh cmake.install.test
 
   ubuntu_2004_script_build_grpc_1_49_2:
-    name: Ubuntu 20.04 script build grpc 1.49.2 cxx14 (static libs - shared libs)
+    name: Ubuntu 20.04 script grpc 1.49.2 cxx14 (static libs - shared libs)
     runs-on: ubuntu-20.04
     env:
       INSTALL_TEST_DIR: '/home/runner/install_test'
@@ -164,7 +162,7 @@ jobs:
       run: ./ci/do_ci.sh cmake.install.test
 
   ubuntu_2404_conan_stable:
-    name: Ubuntu 24.04 conanfile_stable cxx17 (static libs - shared libs - opentracing shim)
+    name: Ubuntu 24.04 conan stable cxx17 (static libs - shared libs - opentracing shim)
     runs-on: ubuntu-24.04
     env:
       INSTALL_TEST_DIR: '/home/runner/install_test'
@@ -198,7 +196,7 @@ jobs:
         run: ./ci/do_ci.sh cmake.opentracing_shim.install.test
 
   ubuntu_2404_conan_latest:
-    name: Ubuntu 24.04 conanfile_latest cxx17 (static libs)
+    name: Ubuntu 24.04 conan latest cxx17 (static libs)
     runs-on: ubuntu-24.04
     env:
       INSTALL_TEST_DIR: '/home/runner/install_test'
@@ -226,7 +224,7 @@ jobs:
           ./ci/verify_packages.sh
 
   macos_14_conan_stable:
-    name: macOS 14 conanfile_stable cxx17 (static libs)
+    name: macOS 14 conan stable cxx17 (static libs)
     runs-on: macos-14
     env:
       INSTALL_TEST_DIR: '/Users/runner/install_test'
@@ -249,7 +247,7 @@ jobs:
       run: ./ci/do_ci.sh cmake.install.test
 
   macos_14_brew_packages:
-    name: macOS 14 with brew packages cxx17 (static libs)
+    name: macOS 14 brew packages cxx17 (static libs)
     runs-on: macos-14
     env:
       CXX_STANDARD: '17'
