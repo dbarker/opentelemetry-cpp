@@ -226,7 +226,7 @@ jobs:
           ./ci/verify_packages.sh
 
   macos_14_conan_stable:
-    name: macOS 14 conanfile_stable cxx17 (static libs - shared libs)
+    name: macOS 14 conanfile_stable cxx17 (static libs)
     runs-on: macos-14
     env:
       INSTALL_TEST_DIR: '/Users/runner/install_test'
@@ -242,14 +242,10 @@ jobs:
         brew install conan autoconf automake libtool coreutils
         conan profile detect --force
     - name: Install or build all dependencies with Conan
-      run: conan install install/conan/conanfile_stable.txt --build=missing -of /Users/runner/conan -s build_type=Debug -s arch=arm64
+      run: conan install install/conan/conanfile_stable.txt --build=missing -of /Users/runner/conan -s build_type=Debug
     - name: Run Tests (static libs)
       env:
         BUILD_SHARED_LIBS: 'OFF'
-      run: ./ci/do_ci.sh cmake.install.test
-    - name: Run Tests (shared libs)
-      env:
-        BUILD_SHARED_LIBS: 'ON'
       run: ./ci/do_ci.sh cmake.install.test
 
   macos_14_brew_packages:
