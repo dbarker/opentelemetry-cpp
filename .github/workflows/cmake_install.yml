@@ -235,9 +235,9 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: 'recursive'
-    - name: Install Conan
+    - name: Install Conan and tools
       run: |
-        brew install conan
+        brew install conan autoconf automake libtool coreutils
         conan profile detect --force
     - name: Install or build all dependencies with Conan
       run: conan install install/conan/conanfile_stable.txt --build=missing -of /Users/runner/conan -s build_type=Debug
