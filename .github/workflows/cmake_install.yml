@@ -237,8 +237,7 @@ jobs:
         submodules: 'recursive'
     - name: Install Conan
       run: |
-        python3 -m pip install --upgrade pip
-        pip install "conan>=2.0,<3"
+        brew install conan
         conan profile detect --force
     - name: Install or build all dependencies with Conan
       run: conan install install/conan/conanfile_stable.txt --build=missing -of /Users/runner/conan -s build_type=Debug
@@ -263,12 +262,9 @@ jobs:
         submodules: 'recursive'
     - name: Install Dependencies with Homebrew
       run: |
-        brew install cmake
         brew install coreutils
-        brew install wget
         brew install googletest
         brew install google-benchmark
-        brew install curl
         brew install zlib
         brew install abseil
         brew install protobuf
