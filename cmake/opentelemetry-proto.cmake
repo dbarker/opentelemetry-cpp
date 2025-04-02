@@ -397,6 +397,14 @@ else() # cmake 3.8 or lower
   target_link_libraries(opentelemetry_proto PUBLIC ${Protobuf_LIBRARIES})
 endif()
 
+# this is needed on some older grcp versions specifically conan recipe for grpc/1.54.3
+if(WITH_OTLP_GRPC)
+  if(TARGET absl::synchronization)
+    target_link_libraries(opentelemetry_proto_grpc
+                          PUBLIC "$<BUILD_INTERFACE:absl::synchronization>")
+  endif()
+endif()
+
 if(BUILD_SHARED_LIBS)
   foreach(proto_target ${OPENTELEMETRY_PROTO_TARGETS})
     set_property(TARGET ${proto_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
