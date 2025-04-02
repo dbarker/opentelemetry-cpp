@@ -415,10 +415,6 @@ if(WITH_PROMETHEUS)
   endif()
 endif()
 
-if(WITH_OTLP_GRPC)
-  find_package(absl CONFIG REQUIRED)
-endif()
-
 if(WITH_OTLP_GRPC
    OR WITH_OTLP_HTTP
    OR WITH_OTLP_FILE)
@@ -738,7 +734,6 @@ message(STATUS "OTELCPP_VERSIONED_LIBS: ${OTELCPP_VERSIONED_LIBS}")
 message(STATUS "OTELCPP_MAINTAINER_MODE: ${OTELCPP_MAINTAINER_MODE}")
 message(STATUS "WITH_STL: ${WITH_STL}")
 message(STATUS "WITH_GSL: ${WITH_GSL}")
-message(STATUS "WITH_ABSEIL: ${WITH_ABSEIL}")
 message(STATUS "WITH_NO_GETENV: ${WITH_NO_GETENV}")
 
 message(STATUS "---------------------------------------------")
