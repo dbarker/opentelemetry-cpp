@@ -16,10 +16,13 @@ RUN apt update && apt install -y \
 	autoconf \
 	automake \
 	libtool \
-	python3-pip \
+	python3-pip  \
+	python3-venv \
 	shellcheck
 
-RUN pip install conan --break-system-packages
+RUN python3 -m venv /opt/conan-venv && \
+    /opt/conan-venv/bin/pip install "conan>=2.0,<3"
+ENV PATH="/opt/conan-venv/bin:$PATH"
 
 ARG USER_UID=1000
 ARG USER_GID=1000
