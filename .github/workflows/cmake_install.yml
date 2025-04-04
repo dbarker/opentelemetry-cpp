@@ -189,7 +189,7 @@ jobs:
       - name: Install or build all dependencies with Conan
         run: |
           sudo -E ./ci/setup_cmake.sh
-          conan install install/conan/conanfile_stable.txt --build=missing -of /home/runner/conan -s build_type=Debug
+          conan install install/conan/conanfile_stable.txt --build=missing -of /home/runner/conan -s build_type=${BUILD_TYPE} -s compiler.cppstd=${CXX_STANDARD}
       - name: Run Tests (static libs)
         env:
           BUILD_SHARED_LIBS: 'OFF'
@@ -225,7 +225,7 @@ jobs:
       - name: Install or build all dependencies with Conan
         run: |
           sudo -E ./ci/setup_cmake.sh
-          conan install install/conan/conanfile_latest.txt --build=missing -of /home/runner/conan -s build_type=Debug
+          conan install install/conan/conanfile_latest.txt --build=missing -of /home/runner/conan -s build_type=${BUILD_TYPE} -s compiler.cppstd=${CXX_STANDARD}
       - name: Run Tests (static libs)
         env:
           BUILD_SHARED_LIBS: 'OFF'
@@ -253,7 +253,7 @@ jobs:
         sudo -E ./ci/setup_cmake_macos.sh
         conan profile detect --force
     - name: Install or build all dependencies with Conan
-      run: conan install install/conan/conanfile_stable.txt --build=missing -of /Users/runner/conan -s build_type=Debug
+      run: conan install install/conan/conanfile_stable.txt --build=missing -of /Users/runner/conan -s build_type=${BUILD_TYPE} -s compiler.cppstd=${CXX_STANDARD}
     - name: Run Tests (static libs)
       env:
         BUILD_SHARED_LIBS: 'OFF'
