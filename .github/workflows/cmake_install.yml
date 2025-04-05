@@ -135,11 +135,13 @@ jobs:
         BUILD_SHARED_LIBS: 'ON'
       run: ./ci/do_ci.sh cmake.install.test
 
-  ubuntu_2204_script_build_grpc_1_49_2:
-    name: Ubuntu 22.04 script grpc 1.49.2 cxx14 (static libs - shared libs)
+  ubuntu_2204_min_cmake_version:
+    name: Ubuntu 22.04 min cmake version (static libs - shared libs)
     runs-on: ubuntu-22.04
     env:
       INSTALL_TEST_DIR: '/home/runner/install_test'
+      CMAKE_VERSION: '3.16.9'
+      GOOGLETEST_VERSION: '1.14.0'
       CXX_STANDARD: '14'
       BUILD_TYPE: 'Debug'
     steps:

@@ -1,23 +1,7 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
-cmake_minimum_required(VERSION 3.10)
-
-# See https://cmake.org/cmake/help/latest/policy/CMP0074.html required by
-# certain version of zlib which CURL depends on.
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12")
-  cmake_policy(SET CMP0074 NEW)
-endif()
-
-# Allow to use normal variable for option()
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.13")
-  cmake_policy(SET CMP0077 NEW)
-endif()
-
-# Prefer CMAKE_MSVC_RUNTIME_LIBRARY if possible
-if(POLICY CMP0091)
-  cmake_policy(SET CMP0091 NEW)
-endif()
+cmake_minimum_required(VERSION 3.16)
 
 if(POLICY CMP0092)
   # https://cmake.org/cmake/help/latest/policy/CMP0092.html#policy:CMP0092 Make
@@ -166,8 +150,6 @@ else()
   endif()
 endif()
 
-message(STATUS "OPENTELEMETRY_ABI_VERSION_NO=${OPENTELEMETRY_ABI_VERSION_NO}")
-
 if(OPENTELEMETRY_CPP_HEADER_VERSION_H MATCHES
    "OPENTELEMETRY_VERSION[ \t\r\n]+\"?([^\"]+)\"?")
   set(OPENTELEMETRY_VERSION ${CMAKE_MATCH_1})
@@ -177,8 +159,6 @@ else()
       "OPENTELEMETRY_VERSION not found on ${CMAKE_CURRENT_LIST_DIR}/api/include/opentelemetry/version.h"
   )
 endif()
-
-message(STATUS "OPENTELEMETRY_VERSION=${OPENTELEMETRY_VERSION}")
 
 option(WITH_NO_DEPRECATED_CODE "Do not include deprecated code" OFF)
 
@@ -399,7 +379,7 @@ if(WITH_PROMETHEUS)
         string(REGEX REPLACE "^v" "" prometheus-cpp_VERSION
                              "${prometheus-cpp_VERSION}")
       endif()
-
+      set(prometheus-cpp_FOUND TRUE)
       message(
         STATUS
           "Using local prometheus-cpp from submodule. Version = ${prometheus-cpp_VERSION}"
@@ -421,8 +401,6 @@ if(WITH_OTLP_GRPC
    OR WITH_OTLP_FILE)
 
   find_package(Protobuf)
-  # Protobuf 3.22 or upper require abseil-cpp, we can find it in
-  # opentelemetry-cpp-config.cmake
 
   if(WITH_OTLP_GRPC)
     find_package(gRPC CONFIG)
@@ -671,8 +649,6 @@ if(BUILD_TESTING)
   if(GTEST_INCLUDE_DIRS)
     include_directories(SYSTEM ${GTEST_INCLUDE_DIRS})
   endif()
-  message(STATUS "GTEST_INCLUDE_DIRS   = ${GTEST_INCLUDE_DIRS}")
-  message(STATUS "GTEST_BOTH_LIBRARIES = ${GTEST_BOTH_LIBRARIES}")
 
   # Try to find gmock
   if(NOT GMOCK_LIB AND TARGET GTest::gmock)
@@ -800,7 +776,7 @@ if(gRPC_FOUND)
   message(STATUS "gRPC: ${gRPC_VERSION}")
 endif()
 if(CURL_FOUND)
-  message(STATUS "CURL: ${CURL_VERSION}")
+  message(STATUS "CURL: ${CURL_VERSION_STRING}")
 endif()
 if(ZLIB_FOUND)
   message(STATUS "ZLIB: ${ZLIB_VERSION}")
