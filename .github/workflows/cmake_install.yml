@@ -13,6 +13,7 @@ jobs:
     runs-on: windows-2022
     env:
       CXX_STANDARD: '17'
+      VCPKG_BUILD_TYPE: "debug"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -31,6 +32,7 @@ jobs:
     runs-on: windows-2019
     env:
       CXX_STANDARD: '14'
+      VCPKG_BUILD_TYPE: "debug"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
