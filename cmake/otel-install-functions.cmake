@@ -1,6 +1,9 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
+
 include("${PROJECT_SOURCE_DIR}/cmake/thirdparty-dependency-config.cmake")
+
+set(OPENTELEMETRY_CPP_CMAKE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
 ########################################################################
 # INTERNAL FUNCTIONS - do not call directly. Use the otel_* "Main" functions
@@ -70,7 +73,7 @@ endfunction()
 
 #-----------------------------------------------------------------------
 # _otel_set_target_component_property:
-#   Sets the target's INTERFACE_OTEL_COMPONENT_NAME property to the component.
+#   Sets the target's INTERFACE_OTEL_COMPONENT_NAME and INTERFACE_OTEL_PROJECT_NAME property to the component.
 #   A target can only be assigned to one component.
 # Note: The INTERFACE_* prefix can be dropped with CMake 3.19+ when custom
 #       properties without the prefix are supported on INTERFACE targets.
@@ -80,7 +83,8 @@ function(_otel_set_target_component_property _TARGET _COMPONENT)
   if(_TARGET_COMPONENT)
     message(FATAL_ERROR "  Target ${_TARGET} is already assigned to an opentelemetry-cpp COMPONENT ${_TARGET_COMPONENT}.")
   endif()
-  set_target_properties(${_TARGET} PROPERTIES INTERFACE_OTEL_COMPONENT_NAME ${_OTEL_ADD_COMP_COMPONENT})
+  set_target_properties(${_TARGET} PROPERTIES INTERFACE_OTEL_COMPONENT_NAME ${_COMPONENT})
+  set_target_properties(${_TARGET} PROPERTIES INTERFACE_OTEL_PROJECT_NAME ${PROJECT_NAME})
 endfunction()
 
 #-----------------------------------------------------------------------
@@ -106,6 +110,12 @@ endfunction()
 #-----------------------------------------------------------------------
 function(_otel_append_component_found _COMPONENT _TARGET OUT_COMPONENTS OUT_COMPONENT_FOUND)
   set(_output_components "${${OUT_COMPONENTS}}")
+  get_target_property(_TARGET_PROJECT_NAME ${_TARGET} INTERFACE_OTEL_PROJECT_NAME)
+  if( _TARGET_PROJECT_NAME AND NOT ${_TARGET_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
+    # The target is not part of the current project so don't append its component
+    set(${OUT_COMPONENT_FOUND} FALSE PARENT_SCOPE)
+    return()
+  endif() 
   get_target_property(_DEPEND_COMPONENT ${_TARGET} INTERFACE_OTEL_COMPONENT_NAME)
   if(_DEPEND_COMPONENT AND NOT ${_DEPEND_COMPONENT} STREQUAL ${_COMPONENT})
     _otel_append_dependent_components(${_DEPEND_COMPONENT} _output_components)
@@ -421,7 +431,7 @@ function(otel_install_components)
   endforeach()
 
   configure_file(
-    "${PROJECT_SOURCE_DIR}/cmake/templates/component-definitions.cmake.in"
+    "${OPENTELEMETRY_CPP_CMAKE_DIR}/templates/component-definitions.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/cmake/component-definitions.cmake"
     @ONLY
   )
@@ -462,7 +472,7 @@ function(otel_install_thirdparty_definitions)
   endforeach()
 
   configure_file(
-    "${PROJECT_SOURCE_DIR}/cmake/templates/thirdparty-dependency-definitions.cmake.in"
+    "${OPENTELEMETRY_CPP_CMAKE_DIR}/templates/thirdparty-dependency-definitions.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/cmake/thirdparty-dependency-definitions.cmake"
     @ONLY)
 
@@ -476,31 +486,31 @@ endfunction()
 #-----------------------------------------------------------------------
 # otel_install_cmake_config:
 #   Configures and installs the cmake.config package file and version file
-#   to support find_package(opentelemetry-cpp CONFIG COMPONENTS ...)
+#   to support find_package(${PROJECT_NAME} CONFIG COMPONENTS ...)
 # Usage:
 #    otel_install_cmake_config()
 #-----------------------------------------------------------------------
 function(otel_install_cmake_config)
-  # Write config file for find_package(opentelemetry-cpp CONFIG)
+  # Write config file for find_package(${PROJECT_NAME} CONFIG)
   set(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_INCLUDEDIR}")
   configure_package_config_file(
-    "${PROJECT_SOURCE_DIR}/cmake/templates/opentelemetry-cpp-config.cmake.in"
+    "${OPENTELEMETRY_CPP_CMAKE_DIR}/templates/opentelemetry-cpp-config.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}/${PROJECT_NAME}-config.cmake"
     INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
     PATH_VARS OPENTELEMETRY_ABI_VERSION_NO OPENTELEMETRY_VERSION PROJECT_NAME
               INCLUDE_INSTALL_DIR CMAKE_INSTALL_LIBDIR)
 
-  # Write version file for find_package(opentelemetry-cpp CONFIG)
+  # Write version file for find_package(${PROJECT_NAME} CONFIG)
   write_basic_package_version_file(
     "${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}/${PROJECT_NAME}-config-version.cmake"
-    VERSION ${OPENTELEMETRY_VERSION}
+    VERSION ${${PROJECT_NAME}_VERSION}
     COMPATIBILITY ExactVersion)
 
   install(
     FILES
       "${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}/${PROJECT_NAME}-config.cmake"
       "${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}/${PROJECT_NAME}-config-version.cmake"
-      "${CMAKE_CURRENT_LIST_DIR}/cmake/find-package-support-functions.cmake"
+      "${OPENTELEMETRY_CPP_CMAKE_DIR}/find-package-support-functions.cmake"
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
     COMPONENT cmake-config)
 endfunction()
