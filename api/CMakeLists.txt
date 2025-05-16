@@ -9,6 +9,10 @@ target_include_directories(
 
 set_target_properties(opentelemetry_api PROPERTIES EXPORT_NAME api)
 
+# Set the ABI version number and opentelemetry-cpp version on the api target for use with in-tree builds
+set_target_properties(opentelemetry_api PROPERTIES INTERFACE_OPENTELEMETRY_ABI_VERSION_NO ${OPENTELEMETRY_ABI_VERSION_NO})
+set_target_properties(opentelemetry_api PROPERTIES INTERFACE_OPENTELEMETRY_VERSION ${OPENTELEMETRY_VERSION})
+
 otel_add_component(
   COMPONENT
   api
