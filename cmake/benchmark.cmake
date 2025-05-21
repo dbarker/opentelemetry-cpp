@@ -8,7 +8,8 @@ add_thirdparty_package(
   GIT_TAG ${benchmark} 
   SUBMODULE_DIR "${PROJECT_SOURCE_DIR}/third_party/benchmark"
   REQUIRED_TARGETS "benchmark::benchmark"
-  VERSION_REGEX "project\\([^\\)]*VERSION[ \t]*([0-9]+(\\.[0-9]+)*(\\.[0-9]+)*)"
+  VERSION_REGEX "project.*\\([^\\)]*VERSION[ \t]*([0-9]+(\\.[0-9]+)*(\\.[0-9]+)*)"
+  VERSION_FILE "\${benchmark_SOURCE_DIR}/CMakeLists.txt"
   CMAKE_ARGS 
     BENCHMARK_ENABLE_TESTING=OFF
 )

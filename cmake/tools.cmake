@@ -257,7 +257,15 @@ function(add_thirdparty_package)
   endif()
 
   if(NOT _THIRDPARTY_VERSION_FILE)
-    set(_THIRDPARTY_VERSION_FILE "\${${_THIRDPARTY_FETCH_NAME}_SOURCE_DIR}/CMakeLists.txt")
+    set(_THIRDPARTY_VERSION_FILE "${PROJECT_SOURCE_DIR}/third_party_release")
+  endif()
+
+  if(NOT _THIRDPARTY_VERSION_REGEX)
+    set(_THIRDPARTY_VERSION_REGEX "${_THIRDPARTY_PACKAGE_NAME}=[ \\t]*v?([0-9]+(\\.[0-9]+)*)")
+  endif()
+
+  if(DEFINED _THIRDPARTY_GIT_REPOSITORY AND NOT _THIRDPARTY_GIT_TAG)
+    message(FATAL_ERROR "GIT_TAG is required if GIT_REPOSITORY is defined")
   endif()
 
   message(STATUS "Adding third party package ${_THIRDPARTY_PACKAGE_NAME}")
@@ -282,26 +290,14 @@ function(add_thirdparty_package)
    
   if(${_THIRDPARTY_PACKAGE_NAME}_FOUND)
     set("${_THIRDPARTY_PACKAGE_NAME}_PROVIDER" "package")
-  else()
-    message(STATUS "  Fetching ${_THIRDPARTY_PACKAGE_NAME} with fetch name ${_THIRDPARTY_FETCH_NAME}")
+  elseif(DEFINED _THIRDPARTY_SUBMODULE_DIR OR DEFINED _THIRDPARTY_GIT_REPOSITORY)
+    message(STATUS "  Fetching ${_THIRDPARTY_PACKAGE_NAME}")
     # Use FetchContent to fetch the package if not found
     include(FetchContent)
 
-    # Set the CMake arguments (KEY=VALUE) for the third party package
-    foreach(_arg IN LISTS _THIRDPARTY_CMAKE_ARGS)
-      if(_arg MATCHES "^([^=]+)=(.*)$")
-        set(_key   "${CMAKE_MATCH_1}")
-        set(_value "${CMAKE_MATCH_2}")
-        message(DEBUG "  Setting ${_key}=${_value}")
-        set(${_key} "${_value}")
-      else()
-        message(WARNING "  ignoring malformed CMAKE_ARG: ${_arg}")
-      endif()
-    endforeach()
-
-    if(DEFINED _THIRDPARTY_SUBMODULE_DIR AND EXISTS "${_THIRDPARTY_SUBMODULE_DIR}/CMakeLists.txt")
+    if(DEFINED _THIRDPARTY_SUBMODULE_DIR AND EXISTS "${_THIRDPARTY_SUBMODULE_DIR}")
       FetchContent_Declare(
-          ${_THIRDPARTY_PACKAGE_NAME}
+          ${_THIRDPARTY_FETCH_NAME}
           SOURCE_DIR ${_THIRDPARTY_SUBMODULE_DIR}
       )
       set("${_THIRDPARTY_PACKAGE_NAME}_PROVIDER" "submodule")
@@ -317,12 +313,25 @@ function(add_thirdparty_package)
     else()
       message(FATAL_ERROR "No valid source found for ${_THIRDPARTY_PACKAGE_NAME}")
     endif()
+
+    # Set the CMake arguments (KEY=VALUE) for the third party package
+    foreach(_arg IN LISTS _THIRDPARTY_CMAKE_ARGS)
+      if(_arg MATCHES "^([^=]+)=(.*)$")
+        set(_key   "${CMAKE_MATCH_1}")
+        set(_value "${CMAKE_MATCH_2}")
+        message(DEBUG "  Setting ${_key}=${_value}")
+        set(${_key} "${_value}" CACHE STRING "" FORCE)
+      else()
+        message(WARNING "  ignoring malformed CMAKE_ARG: ${_arg}")
+      endif()
+    endforeach()
+
     FetchContent_MakeAvailable(${_THIRDPARTY_FETCH_NAME})
 
     set(${_THIRDPARTY_FETCH_NAME}_SOURCE_DIR ${${_THIRDPARTY_FETCH_NAME}_SOURCE_DIR} PARENT_SCOPE)
     set(${_THIRDPARTY_FETCH_NAME}_BINARY_DIR ${${_THIRDPARTY_FETCH_NAME}_BINARY_DIR} PARENT_SCOPE)
 
-    if(DEFINED _THIRDPARTY_VERSION_REGEX)
+    if(DEFINED _THIRDPARTY_VERSION_REGEX AND DEFINED _THIRDPARTY_VERSION_FILE)
       string(CONFIGURE "${_THIRDPARTY_VERSION_FILE}" THIRDPARTY_VERSION_FILE)
       # parse the version from the top cmake file
       file(READ "${THIRDPARTY_VERSION_FILE}" _file_contents)

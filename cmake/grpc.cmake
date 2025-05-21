@@ -8,13 +8,13 @@ include(CMakeFindDependencyMacro)
 
 add_thirdparty_package(
   PACKAGE_NAME gRPC
+  FETCH_NAME grpc
   SEARCH_MODES "CONFIG"
   GIT_REPOSITORY "https://github.com/grpc/grpc.git"
-  GIT_TAG "${gRPC}"
-  REQUIRED_TARGETS "gRPC::grpc++"
-  VERSION_REGEX "set\\s*\\(\\s*PACKAGE_VERSION[ \t]+([0-9]+(\\.[0-9]+(\\.[0-9])*)([ \t]|\\))"
+  GIT_TAG ${gRPC}
   CMAKE_ARGS
-    CMAKE_POSITION_INDEPENDENT_CODE=ON 
+    CMAKE_POSITION_INDEPENDENT_CODE=ON
+    gRPC_INSTALL=${OPENTELEMETRY_INSTALL} 
     gRPC_BUILD_TESTS=OFF
     gRPC_BUILD_GRPC_CPP_PLUGIN=ON
     gRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF
@@ -24,4 +24,13 @@ add_thirdparty_package(
     gRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF
     gRPC_BUILD_GRPC_RUBY_PLUGIN=OFF
     gRPC_BUILD_GRPCPP_OTEL_PLUGIN=OFF
+    RE2_BUILD_TESTING=OFF
 )
+
+if(TARGET grpc++ AND NOT TARGET gRPC::grpc++)
+  add_library(gRPC::grpc++ ALIAS grpc++)
+endif()
+
+if(NOT TARGET gRPC::grpc++ )
+  message(FATAL_ERROR "A required gRPC target (grpc++) was not found")
+endif()

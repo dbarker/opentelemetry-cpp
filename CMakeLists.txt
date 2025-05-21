@@ -327,27 +327,6 @@ endif()
 
 find_package(Threads)
 
-function(install_windows_deps)
-  # Bootstrap vcpkg from CMake and auto-install deps in case if we are missing
-  # deps on Windows. Respect the target architecture variable.
-  set(VCPKG_TARGET_ARCHITECTURE
-      ${ARCH}
-      PARENT_SCOPE)
-  message(STATUS "Installing build tools and dependencies...")
-  set(ENV{ARCH} ${ARCH})
-  execute_process(
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/setup-buildtools.cmd)
-  set(CMAKE_TOOLCHAIN_FILE
-      ${CMAKE_CURRENT_SOURCE_DIR}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake
-      CACHE FILEPATH "")
-  message(
-    STATUS
-      "Make sure that vcpkg.cmake is set as the CMAKE_TOOLCHAIN_FILE at the START of the cmake build process!
-    Can be command-line arg (cmake -DCMAKE_TOOLCHAIN_FILE=...) or set in your editor of choice."
-  )
-
-endfunction()
-
 function(set_target_version target_name)
   if(OTELCPP_VERSIONED_LIBS)
     set_target_properties(
@@ -379,11 +358,11 @@ if(WITH_OTLP_GRPC
    OR WITH_OTLP_HTTP
    OR WITH_OTLP_FILE)
 
-  include(${PROJECT_SOURCE_DIR}/cmake/protobuf.cmake)
-
   if(WITH_OTLP_GRPC)
     include(${PROJECT_SOURCE_DIR}/cmake/grpc.cmake)
   endif()
+
+  include(${PROJECT_SOURCE_DIR}/cmake/protobuf.cmake)
 
   set(SAVED_CMAKE_CXX_CLANG_TIDY ${CMAKE_CXX_CLANG_TIDY})
   set(CMAKE_CXX_CLANG_TIDY "")
@@ -451,7 +430,7 @@ else()
 endif()
 
 if((NOT WITH_API_ONLY) AND USE_NLOHMANN_JSON)
-  include(cmake/nlohmann-json.cmake)
+  include(${PROJECT_SOURCE_DIR}/cmake/nlohmann-json.cmake)
 endif()
 
 if(WITH_OPENTRACING)
@@ -649,6 +628,9 @@ if(Protobuf_FOUND)
 endif()
 if(gRPC_FOUND)
   message(STATUS "gRPC: ${gRPC_VERSION} from ${gRPC_PROVIDER}")
+endif()
+if(opentelemetry-proto_FOUND)
+  message(STATUS "opentelemetry-proto: ${opentelemetry-proto_VERSION} from ${opentelemetry-proto_PROVIDER}")
 endif()
 if(CURL_FOUND)
   message(STATUS "CURL: ${CURL_VERSION}")

@@ -6,10 +6,11 @@ add_thirdparty_package(
   FETCH_NAME googletest
   SEARCH_MODES "CONFIG"
   GIT_REPOSITORY "https://github.com/google/googletest.git"
-  GIT_TAG ${googltest} 
+  GIT_TAG ${googletest} 
   SUBMODULE_DIR "${PROJECT_SOURCE_DIR}/third_party/googletest"
   REQUIRED_TARGETS "GTest::gtest;GTest::gtest_main;GTest::gmock"
   VERSION_REGEX "set\\s*\\(\\s*GOOGLETEST_VERSION[ \t]+([0-9]+(\\.[0-9]+)*)([ \t]|\\))"
+  VERSION_FILE "\${googletest_SOURCE_DIR}/CMakeLists.txt"
 )
 
 if(NOT GTEST_BOTH_LIBRARIES)

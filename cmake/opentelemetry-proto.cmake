@@ -32,46 +32,20 @@ if(OTELCPP_PROTO_PATH)
   endif()
   message(STATUS "opentelemetry-proto dependency satisfied by: external path")
   set(PROTO_PATH ${OTELCPP_PROTO_PATH})
-  set(needs_proto_download FALSE)
 else()
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/opentelemetry-proto/.git)
+  if(EXISTS ${PROJECT_SOURCE_DIR}/third_party/opentelemetry-proto/.git)
     message(STATUS "opentelemetry-proto dependency satisfied by: git submodule")
     set(PROTO_PATH
-        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/opentelemetry-proto")
-    set(needs_proto_download FALSE)
-  else()
-    message(
-      STATUS "opentelemetry-proto dependency satisfied by: github download")
-    if("${opentelemetry-proto}" STREQUAL "")
-      file(READ "${CMAKE_CURRENT_LIST_DIR}/../third_party_release"
-           OTELCPP_THIRD_PARTY_RELEASE_CONTENT)
-      if(OTELCPP_THIRD_PARTY_RELEASE_CONTENT MATCHES
-         "opentelemetry-proto=[ \\t]*([A-Za-z0-9_\\.\\-]+)")
-        set(opentelemetry-proto "${CMAKE_MATCH_1}")
-      else()
-        set(opentelemetry-proto "v1.6.0")
-      endif()
-      unset(OTELCPP_THIRD_PARTY_RELEASE_CONTENT)
-    endif()
-    include(ExternalProject)
-    ExternalProject_Add(
-      opentelemetry-proto
-      GIT_REPOSITORY https://github.com/open-telemetry/opentelemetry-proto.git
-      GIT_TAG "${opentelemetry-proto}"
-      UPDATE_COMMAND ""
-      BUILD_COMMAND ""
-      INSTALL_COMMAND ""
-      CONFIGURE_COMMAND ""
-      TEST_AFTER_INSTALL 0
-      DOWNLOAD_NO_PROGRESS 1
-      LOG_CONFIGURE 1
-      LOG_BUILD 1
-      LOG_INSTALL 1)
-    ExternalProject_Get_Property(opentelemetry-proto INSTALL_DIR)
-    set(PROTO_PATH "${INSTALL_DIR}/src/opentelemetry-proto")
-    set(needs_proto_download TRUE)
+        "${PROJECT_SOURCE_DIR}/third_party/opentelemetry-proto")
   endif()
 endif()
+
+add_thirdparty_package(
+  PACKAGE_NAME opentelemetry-proto
+  GIT_REPOSITORY "https://github.com/open-telemetry/opentelemetry-proto.git"
+  GIT_TAG ${opentelemetry-proto} 
+  SUBMODULE_DIR "${PROTO_PATH}"
+)
 
 set(COMMON_PROTO "${PROTO_PATH}/opentelemetry/proto/common/v1/common.proto")
 set(RESOURCE_PROTO
@@ -361,9 +335,6 @@ if(WITH_OTLP_GRPC)
   endif()
 endif()
 
-if(needs_proto_download)
-  add_dependencies(opentelemetry_proto opentelemetry-proto)
-endif()
 set_target_properties(opentelemetry_proto PROPERTIES EXPORT_NAME proto)
 patch_protobuf_targets(opentelemetry_proto)
 

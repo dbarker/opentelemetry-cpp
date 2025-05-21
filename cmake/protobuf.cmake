@@ -8,25 +8,27 @@
 # mode. See https://gitlab.kitware.com/cmake/cmake/-/issues/24321 for more
 # details.
 
-add_thirdparty_package(
-  PACKAGE_NAME Protobuf
-  SEARCH_MODES "CONFIG" "MODULE"
-  GIT_REPOSITORY "https://github.com/protocolbuffers/protobuf.git"
-  GIT_TAG "${Protobuf}"
-  REQUIRED_TARGETS "protobuf::libprotobuf"
-  VERSION_REGEX "\"cpp\"[ \t]*:[ \t]*\"([^\"]+)\""
-  VERSION_FILE "\${Protobuf_SOURCE_DIR}/version.json"
-  CMAKE_ARGS
-    CMAKE_POSITION_INDEPENDENT_CODE=ON
-    protobuf_BUILD_TESTS=OFF
-    protobuf_BUILD_EXAMPLES=OFF 
-)
+# if(DEFINED gRPC_PROVIDER AND NOT gRPC_PROVIDER STREQUAL "package" AND NOT TARGET "protobuf::libprotobuf")
+  add_thirdparty_package(
+    PACKAGE_NAME Protobuf
+    FETCH_NAME protobuf
+    SEARCH_MODES "CONFIG" "MODULE"
+    GIT_REPOSITORY "https://github.com/protocolbuffers/protobuf.git"
+    GIT_TAG "${Protobuf}"
+    VERSION_REGEX "\"cpp\"[ \t]*:[ \t]*\"([^\"]+)\""
+    VERSION_FILE "\${protobuf_SOURCE_DIR}/version.json"
+    CMAKE_ARGS
+      CMAKE_POSITION_INDEPENDENT_CODE=ON
+      protobuf_BUILD_TESTS=OFF
+      protobuf_BUILD_EXAMPLES=OFF 
+  )
+# endif()
 
 if(WIN32)
   # Always use x64 protoc.exe
   if(NOT EXISTS "${Protobuf_PROTOC_EXECUTABLE}")
      set(Protobuf_PROTOC_EXECUTABLE
-         ${CMAKE_CURRENT_SOURCE_DIR}/tools/vcpkg/packages/protobuf_x64-windows/tools/protobuf/protoc.exe
+         ${PROJECT_SOURCE_DIR}/tools/vcpkg/packages/protobuf_x64-windows/tools/protobuf/protoc.exe
       )
    endif()
 endif()
@@ -48,5 +50,9 @@ elseif(Protobuf_PROTOC_EXECUTABLE)
   # Some versions of FindProtobuf.cmake uses mixed case instead of uppercase
   set(PROTOBUF_PROTOC_EXECUTABLE ${Protobuf_PROTOC_EXECUTABLE})
 endif()
+
+if( NOT TARGET protobuf::libprotobuf)
+  message(FATAL_ERROR "A required protobuf target (protobuf::libprotobuf) was not found")
+endif() 
 
 message(STATUS "PROTOBUF_PROTOC_EXECUTABLE=${PROTOBUF_PROTOC_EXECUTABLE}")
