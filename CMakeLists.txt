@@ -36,16 +36,7 @@ project(opentelemetry-cpp)
 # Mark variables as used so cmake doesn't complain about them
 mark_as_advanced(CMAKE_TOOLCHAIN_FILE)
 
-# Note: CMAKE_FIND_PACKAGE_PREFER_CONFIG requires cmake 3.15. Prefer cmake
-# CONFIG search mode to find dependencies. This is important to properly find
-# protobuf versions 3.22.0 and above due to the abseil-cpp dependency.
-set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
-
-# Don't use customized cmake modules if vcpkg is used to resolve dependence.
-if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-  list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules/")
-endif()
-
+# Set the third-party dependency versions expected
 if(EXISTS "${CMAKE_SOURCE_DIR}/third_party_release")
   file(STRINGS "${CMAKE_SOURCE_DIR}/third_party_release" third_party_tags)
   foreach(third_party ${third_party_tags})
@@ -56,69 +47,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/third_party_release")
   endforeach()
 endif()
 
-if(DEFINED ENV{ARCH})
-  # Architecture may be specified via ARCH environment variable
-  set(ARCH $ENV{ARCH})
-else()
-  # Autodetection logic that populates ARCH variable
-  if(CMAKE_SYSTEM_PROCESSOR MATCHES "amd64.*|x86_64.*|AMD64.*")
-    # Windows may report AMD64 even if target is 32-bit
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-      set(ARCH x64)
-    elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-      set(ARCH x86)
-    endif()
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i686.*|i386.*|x86.*")
-    # Windows may report x86 even if target is 64-bit
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-      set(ARCH x64)
-    elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-      set(ARCH x86)
-    endif()
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "powerpc")
-    # AIX will report the processor as 'powerpc' even if building in 64-bit mode
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-      set(ARCH ppc64)
-    else()
-      set(ARCH ppc32)
-    endif()
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES
-         "^(aarch64.*|AARCH64.*|arm64.*|ARM64.*)")
-    set(ARCH arm64)
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm.*|ARM.*)")
-    set(ARCH arm)
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(powerpc|ppc)64le")
-    set(ARCH ppc64le)
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(powerpc|ppc)64")
-    set(ARCH ppc64)
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(mips.*|MIPS.*)")
-    set(ARCH mips)
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(riscv.*|RISCV.*)")
-    set(ARCH riscv)
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(s390x.*|S390X.*)")
-    set(ARCH s390x)
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(sparc.*|SPARC.*)")
-    set(ARCH sparc)
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(loongarch.*|LOONGARCH.*)")
-    set(ARCH loongarch)
-  else()
-    message(
-      FATAL_ERROR
-        "opentelemetry-cpp: unrecognized target processor ${CMAKE_SYSTEM_PROCESSOR} configuration!"
-    )
-  endif()
-endif()
-message(STATUS "Building for architecture ARCH=${ARCH}")
-
 # Autodetect vcpkg toolchain
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   set(CMAKE_TOOLCHAIN_FILE
       "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
       CACHE STRING "")
-endif()
-
-if(VCPKG_CHAINLOAD_TOOLCHAIN_FILE)
-  include("${VCPKG_CHAINLOAD_TOOLCHAIN_FILE}")
 endif()
 
 option(WITH_ABI_VERSION_1 "ABI version 1" ON)
@@ -547,7 +480,7 @@ message(STATUS "build settings")
 message(STATUS "---------------------------------------------")
 message(STATUS "OpenTelemetry: ${OPENTELEMETRY_VERSION}")
 message(STATUS "OpenTelemetry ABI: ${OPENTELEMETRY_ABI_VERSION_NO}")
-message(STATUS "ARCH: ${ARCH}")
+message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
 message(STATUS "CXX: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 message(STATUS "CXXFLAGS: ${CMAKE_CXX_FLAGS}")
