@@ -295,7 +295,7 @@ function(add_thirdparty_package)
     # Use FetchContent to fetch the package if not found
     include(FetchContent)
 
-    if(DEFINED _THIRDPARTY_SUBMODULE_DIR AND EXISTS "${_THIRDPARTY_SUBMODULE_DIR}")
+    if(DEFINED _THIRDPARTY_SUBMODULE_DIR AND EXISTS "${_THIRDPARTY_SUBMODULE_DIR}/.git")
       FetchContent_Declare(
           ${_THIRDPARTY_FETCH_NAME}
           SOURCE_DIR ${_THIRDPARTY_SUBMODULE_DIR}
