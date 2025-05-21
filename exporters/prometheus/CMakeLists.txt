@@ -16,7 +16,7 @@ target_include_directories(
          "$<INSTALL_INTERFACE:include>")
 
 target_link_libraries(opentelemetry_exporter_prometheus
-                      PUBLIC opentelemetry_metrics prometheus-cpp::pull prometheus-cpp::core)
+                      PUBLIC opentelemetry_metrics prometheus-cpp::core PRIVATE prometheus-cpp::pull)
 
 otel_add_component(
   COMPONENT
