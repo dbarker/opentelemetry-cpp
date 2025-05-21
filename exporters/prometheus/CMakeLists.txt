@@ -15,22 +15,8 @@ target_include_directories(
   PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
          "$<INSTALL_INTERFACE:include>")
 
-set(PROMETHEUS_EXPORTER_TARGETS opentelemetry_exporter_prometheus)
-if(TARGET pull)
-  list(APPEND PROMETHEUS_EXPORTER_TARGETS pull)
-endif()
-if(TARGET core)
-  list(APPEND PROMETHEUS_EXPORTER_TARGETS core)
-endif()
-if(TARGET util)
-  list(APPEND PROMETHEUS_EXPORTER_TARGETS util)
-endif()
-set(PROMETHEUS_CPP_TARGETS prometheus-cpp::pull prometheus-cpp::core)
-if(TARGET prometheus-cpp::util)
-  list(APPEND PROMETHEUS_CPP_TARGETS prometheus-cpp::util)
-endif()
 target_link_libraries(opentelemetry_exporter_prometheus
-                      PUBLIC opentelemetry_metrics ${PROMETHEUS_CPP_TARGETS})
+                      PUBLIC opentelemetry_metrics prometheus-cpp::pull prometheus-cpp::core)
 
 otel_add_component(
   COMPONENT

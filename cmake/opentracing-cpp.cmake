@@ -35,9 +35,6 @@ if(NOT ${OpenTracing_PROVIDER} STREQUAL "package")
   endif()
 endif()
 
-message(STATUS "OpenTracing version: ${OpenTracing_VERSION}")
-message(STATUS "OpenTracing provider: ${OpenTracing_PROVIDER}")
-
 if(NOT TARGET OpenTracing::opentracing AND NOT TARGET OpenTracing::opentracing-static)
   message(FATAL_ERROR "A required OpenTracing target (opentracing or opentracing-static) was not found")
 endif()

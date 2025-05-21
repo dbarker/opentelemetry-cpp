@@ -9,4 +9,6 @@ add_thirdparty_package(
   SUBMODULE_DIR "${PROJECT_SOURCE_DIR}/third_party/benchmark"
   REQUIRED_TARGETS "benchmark::benchmark"
   VERSION_REGEX "project\\([^\\)]*VERSION[ \t]*([0-9]+(\\.[0-9]+)*(\\.[0-9]+)*)"
+  CMAKE_ARGS 
+    BENCHMARK_ENABLE_TESTING=OFF
 )

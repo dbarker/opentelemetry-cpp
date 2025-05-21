@@ -379,78 +379,12 @@ if(WITH_OTLP_GRPC
    OR WITH_OTLP_HTTP
    OR WITH_OTLP_FILE)
 
-  # Including the CMakeFindDependencyMacro resolves an error from
-  # gRPCConfig.cmake on some grpc versions. See
-  # https://github.com/grpc/grpc/pull/33361 for more details.
-  include(CMakeFindDependencyMacro)
-
-  # Protobuf 3.22+ depends on abseil-cpp and must be found using the cmake
-  # find_package CONFIG search mode. The following attempts to find Protobuf
-  # using the CONFIG mode first, and if not found, falls back to the MODULE
-  # mode. See https://gitlab.kitware.com/cmake/cmake/-/issues/24321 for more
-  # details.
-  find_package(Protobuf CONFIG)
-  if(NOT Protobuf_FOUND)
-    find_package(Protobuf MODULE)
-    if(Protobuf_FOUND AND Protobuf_VERSION VERSION_GREATER_EQUAL "3.22.0")
-      message(
-        WARNING
-          "Found Protobuf version ${Protobuf_VERSION} using MODULE mode. "
-          "Linking errors may occur. Protobuf 3.22+ depends on abseil-cpp "
-          "and should be found using the CONFIG mode.")
-    endif()
-  endif()
+  include(${PROJECT_SOURCE_DIR}/cmake/protobuf.cmake)
 
   if(WITH_OTLP_GRPC)
-    find_package(gRPC CONFIG)
+    include(${PROJECT_SOURCE_DIR}/cmake/grpc.cmake)
   endif()
-  if((NOT Protobuf_FOUND) OR (WITH_OTLP_GRPC AND NOT gRPC_FOUND))
-    if(WIN32 AND (NOT DEFINED CMAKE_TOOLCHAIN_FILE))
-      install_windows_deps()
-    endif()
 
-    if(WIN32 AND (NOT DEFINED CMAKE_TOOLCHAIN_FILE))
-      message(FATAL_ERROR "Windows dependency installation failed!")
-    endif()
-    if(WIN32)
-      include(${CMAKE_TOOLCHAIN_FILE})
-    endif()
-
-    if(NOT Protobuf_FOUND)
-      find_package(Protobuf CONFIG REQUIRED)
-    endif()
-    if(NOT gRPC_FOUND AND WITH_OTLP_GRPC)
-      find_package(gRPC CONFIG)
-    endif()
-    if(WIN32)
-      # Always use x64 protoc.exe
-      if(NOT EXISTS "${Protobuf_PROTOC_EXECUTABLE}")
-        set(Protobuf_PROTOC_EXECUTABLE
-            ${CMAKE_CURRENT_SOURCE_DIR}/tools/vcpkg/packages/protobuf_x64-windows/tools/protobuf/protoc.exe
-        )
-      endif()
-    endif()
-  endif()
-  # Latest Protobuf imported targets and without legacy module support
-  if(TARGET protobuf::protoc)
-    if(CMAKE_CROSSCOMPILING AND Protobuf_PROTOC_EXECUTABLE)
-      set(PROTOBUF_PROTOC_EXECUTABLE ${Protobuf_PROTOC_EXECUTABLE})
-    else()
-      project_build_tools_get_imported_location(PROTOBUF_PROTOC_EXECUTABLE
-                                                protobuf::protoc)
-      # If protobuf::protoc is not a imported target, then we use the target
-      # directly for fallback
-      if(NOT PROTOBUF_PROTOC_EXECUTABLE)
-        set(PROTOBUF_PROTOC_EXECUTABLE protobuf::protoc)
-      endif()
-    endif()
-  elseif(Protobuf_PROTOC_EXECUTABLE)
-    # Some versions of FindProtobuf.cmake uses mixed case instead of uppercase
-    set(PROTOBUF_PROTOC_EXECUTABLE ${Protobuf_PROTOC_EXECUTABLE})
-  endif()
-  include(CMakeDependentOption)
-
-  message(STATUS "PROTOBUF_PROTOC_EXECUTABLE=${PROTOBUF_PROTOC_EXECUTABLE}")
   set(SAVED_CMAKE_CXX_CLANG_TIDY ${CMAKE_CXX_CLANG_TIDY})
   set(CMAKE_CXX_CLANG_TIDY "")
   include(cmake/opentelemetry-proto.cmake)
@@ -622,10 +556,10 @@ if(BUILD_TESTING)
   include(GoogleTest)
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/googletest.cmake)
   enable_testing()
-endif()
 
-if(WITH_BENCHMARK)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/benchmark.cmake)
+  if(WITH_BENCHMARK)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/benchmark.cmake)
+  endif()
 endif()
 
 # Record build config and versions
@@ -702,8 +636,8 @@ message(STATUS "---------------------------------------------")
 message(STATUS "versions")
 message(STATUS "---------------------------------------------")
 message(STATUS "CMake: ${CMAKE_VERSION}")
-message(STATUS "GTest: ${GTest_VERSION}")
-message(STATUS "benchmark: ${benchmark_VERSION}")
+message(STATUS "GTest: ${GTest_VERSION} from ${GTest_PROVIDER}")
+message(STATUS "benchmark: ${benchmark_VERSION} from ${benchmark_PROVIDER}")
 if(WITH_GSL)
   message(STATUS "GSL: ${GSL_VERSION}")
 endif()
@@ -711,10 +645,10 @@ if(absl_FOUND)
   message(STATUS "Abseil: ${absl_VERSION}")
 endif()
 if(Protobuf_FOUND)
-  message(STATUS "Protobuf: ${Protobuf_VERSION}")
+  message(STATUS "Protobuf: ${Protobuf_VERSION} from ${Protobuf_PROVIDER}")
 endif()
 if(gRPC_FOUND)
-  message(STATUS "gRPC: ${gRPC_VERSION}")
+  message(STATUS "gRPC: ${gRPC_VERSION} from ${gRPC_PROVIDER}")
 endif()
 if(CURL_FOUND)
   message(STATUS "CURL: ${CURL_VERSION}")
@@ -723,11 +657,15 @@ if(ZLIB_FOUND)
   message(STATUS "ZLIB: ${ZLIB_VERSION}")
 endif()
 if(USE_NLOHMANN_JSON)
-  message(STATUS "nlohmann-json: ${nlohmann_json_VERSION}")
+  message(STATUS "nlohmann-json: ${nlohmann_json_VERSION} from ${nlohmann_json_PROVIDER}")
 endif()
 if(prometheus-cpp_FOUND)
-  message(STATUS "prometheus-cpp: ${prometheus-cpp_VERSION}")
+  message(STATUS "prometheus-cpp: ${prometheus-cpp_VERSION} from ${prometheus-cpp_PROVIDER}")
 endif()
+if(OpenTracing_FOUND)
+  message(STATUS "OpenTracing: ${OpenTracing_VERSION} from ${OpenTracing_PROVIDER}")
+endif() 
+
 message(STATUS "---------------------------------------------")
 
 include("${PROJECT_SOURCE_DIR}/cmake/otel-install-functions.cmake")
