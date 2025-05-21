@@ -372,49 +372,7 @@ endif()
 include(GNUInstallDirs)
 
 if(WITH_PROMETHEUS)
-  find_package(prometheus-cpp CONFIG QUIET)
-  if(NOT prometheus-cpp_FOUND)
-    message(STATUS "Trying to use local prometheus-cpp from submodule")
-    if(EXISTS ${PROJECT_SOURCE_DIR}/third_party/prometheus-cpp/.git)
-      set(SAVED_ENABLE_TESTING ${ENABLE_TESTING})
-      set(SAVED_CMAKE_CXX_CLANG_TIDY ${CMAKE_CXX_CLANG_TIDY})
-      set(SAVED_CMAKE_CXX_INCLUDE_WHAT_YOU_USE
-          ${CMAKE_CXX_INCLUDE_WHAT_YOU_USE})
-      set(ENABLE_TESTING OFF)
-      set(CMAKE_CXX_CLANG_TIDY "")
-      set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE "")
-      add_subdirectory(third_party/prometheus-cpp)
-      set(ENABLE_TESTING ${SAVED_ENABLE_TESTING})
-      set(CMAKE_CXX_CLANG_TIDY ${SAVED_CMAKE_CXX_CLANG_TIDY})
-      set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE
-          ${SAVED_CMAKE_CXX_INCLUDE_WHAT_YOU_USE})
-
-      # Get the version of the prometheus-cpp submodule
-      find_package(Git QUIET)
-      if(Git_FOUND)
-        execute_process(
-          COMMAND ${GIT_EXECUTABLE} describe --tags --always
-          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/prometheus-cpp
-          OUTPUT_VARIABLE prometheus-cpp_VERSION
-          OUTPUT_STRIP_TRAILING_WHITESPACE)
-        string(REGEX REPLACE "^v" "" prometheus-cpp_VERSION
-                             "${prometheus-cpp_VERSION}")
-      endif()
-
-      message(
-        STATUS
-          "Using local prometheus-cpp from submodule. Version = ${prometheus-cpp_VERSION}"
-      )
-    else()
-      message(
-        FATAL_ERROR
-          "\nprometheus-cpp package was not found. Please either provide it manually or clone with submodules. "
-          "To initialize, fetch and checkout any nested submodules, you can use the following command:\n"
-          "git submodule update --init --recursive")
-    endif()
-  else()
-    message(STATUS "Using external prometheus-cpp")
-  endif()
+  include(${PROJECT_SOURCE_DIR}/cmake/prometheus-cpp.cmake)
 endif()
 
 if(WITH_OTLP_GRPC
@@ -562,6 +520,10 @@ if((NOT WITH_API_ONLY) AND USE_NLOHMANN_JSON)
   include(cmake/nlohmann-json.cmake)
 endif()
 
+if(WITH_OPENTRACING)
+  include(${PROJECT_SOURCE_DIR}/cmake/opentracing-cpp.cmake)
+endif()
+
 if(OTELCPP_MAINTAINER_MODE)
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(STATUS "Building with gcc in maintainer mode.")
@@ -655,88 +617,15 @@ endif(OTELCPP_MAINTAINER_MODE)
 
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
 
-include(CTest)
 if(BUILD_TESTING)
-  if(EXISTS ${CMAKE_BINARY_DIR}/lib/libgtest.a)
-    # Prefer GTest from build tree. GTest is not always working with
-    # CMAKE_PREFIX_PATH
-    set(GTEST_INCLUDE_DIRS
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest/googletest/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest/googlemock/include)
-    if(TARGET gtest)
-      set(GTEST_BOTH_LIBRARIES gtest gtest_main)
-    else()
-      set(GTEST_BOTH_LIBRARIES ${CMAKE_BINARY_DIR}/lib/libgtest.a
-                               ${CMAKE_BINARY_DIR}/lib/libgtest_main.a)
-    endif()
-  elseif(WIN32)
-    # Make sure we are always bootsrapped with vcpkg on Windows
-    find_package(GTest)
-    if(NOT (GTEST_FOUND OR GTest_FOUND))
-      if(DEFINED CMAKE_TOOLCHAIN_FILE)
-        message(
-          FATAL_ERROR
-            "Pleaes install GTest with the CMAKE_TOOLCHAIN_FILE at ${CMAKE_TOOLCHAIN_FILE}"
-        )
-      else()
-        install_windows_deps()
-        include(${CMAKE_TOOLCHAIN_FILE})
-        find_package(GTest REQUIRED)
-      endif()
-    endif()
-  else()
-    # Prefer GTest installed by OS distro, brew or vcpkg package manager
-    find_package(GTest REQUIRED)
-  endif()
-  if(NOT GTEST_BOTH_LIBRARIES)
-    # New GTest package names
-    if(TARGET GTest::gtest)
-      set(GTEST_BOTH_LIBRARIES GTest::gtest GTest::gtest_main)
-    elseif(TARGET GTest::GTest)
-      set(GTEST_BOTH_LIBRARIES GTest::GTest GTest::Main)
-    endif()
-  endif()
-  if(GTEST_INCLUDE_DIRS)
-    include_directories(SYSTEM ${GTEST_INCLUDE_DIRS})
-  endif()
-  message(STATUS "GTEST_INCLUDE_DIRS   = ${GTEST_INCLUDE_DIRS}")
-  message(STATUS "GTEST_BOTH_LIBRARIES = ${GTEST_BOTH_LIBRARIES}")
-
-  # Try to find gmock
-  if(NOT GMOCK_LIB AND TARGET GTest::gmock)
-    set(GMOCK_LIB GTest::gmock)
-  elseif(MSVC)
-    # Explicitly specify that we consume GTest from shared library. The rest of
-    # code logic below determines whether we link Release or Debug flavor of the
-    # library. These flavors have different prefix on Windows, gmock and gmockd
-    # respectively.
-    add_definitions(-DGTEST_LINKED_AS_SHARED_LIBRARY=1)
-    if(GMOCK_LIB)
-      # unset GMOCK_LIB to force find_library to redo the lookup, as the cached
-      # entry could cause linking to incorrect flavor of gmock and leading to
-      # runtime error.
-      unset(GMOCK_LIB CACHE)
-    endif()
-  endif()
-  if(NOT GMOCK_LIB)
-    if(MSVC AND CMAKE_BUILD_TYPE STREQUAL "Debug")
-      find_library(GMOCK_LIB gmockd PATH_SUFFIXES lib)
-    else()
-      find_library(GMOCK_LIB gmock PATH_SUFFIXES lib)
-    endif()
-    # Reset GMOCK_LIB if it was not found, or some target may link
-    # GMOCK_LIB-NOTFOUND
-    if(NOT GMOCK_LIB)
-      unset(GMOCK_LIB)
-      unset(GMOCK_LIB CACHE)
-    endif()
-  endif()
-
+  include(CTest)
+  include(GoogleTest)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/googletest.cmake)
   enable_testing()
-  if(WITH_BENCHMARK)
-    # Benchmark respects the CMAKE_PREFIX_PATH
-    find_package(benchmark CONFIG REQUIRED)
-  endif()
+endif()
+
+if(WITH_BENCHMARK)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/benchmark.cmake)
 endif()
 
 # Record build config and versions
@@ -862,30 +751,6 @@ endif()
 add_subdirectory(api)
 
 if(WITH_OPENTRACING)
-  find_package(OpenTracing CONFIG QUIET)
-  if(NOT OpenTracing_FOUND)
-    set(OPENTRACING_DIR "third_party/opentracing-cpp")
-    message(STATUS "Trying to use local ${OPENTRACING_DIR} from submodule")
-    if(EXISTS "${PROJECT_SOURCE_DIR}/${OPENTRACING_DIR}/.git")
-      set(SAVED_BUILD_TESTING ${BUILD_TESTING})
-      set(BUILD_TESTING OFF)
-      set(SAVED_CMAKE_CXX_INCLUDE_WHAT_YOU_USE
-          ${CMAKE_CXX_INCLUDE_WHAT_YOU_USE})
-      set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE "")
-      add_subdirectory(${OPENTRACING_DIR})
-      set(BUILD_TESTING ${SAVED_BUILD_TESTING})
-      set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE
-          ${SAVED_CMAKE_CXX_INCLUDE_WHAT_YOU_USE})
-    else()
-      message(
-        FATAL_ERROR
-          "\nopentracing-cpp package was not found. Please either provide it manually or clone with submodules. "
-          "To initialize, fetch and checkout any nested submodules, you can use the following command:\n"
-          "git submodule update --init --recursive")
-    endif()
-  else()
-    message(STATUS "Using external opentracing-cpp")
-  endif()
   add_subdirectory(opentracing-shim)
 endif()
 

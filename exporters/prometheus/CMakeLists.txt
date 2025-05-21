@@ -1,10 +1,6 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
-if(NOT TARGET prometheus-cpp::core)
-  find_package(prometheus-cpp CONFIG REQUIRED)
-endif()
-
 add_library(
   opentelemetry_exporter_prometheus
   src/exporter.cc src/exporter_options.cc src/exporter_factory.cc
