@@ -32,12 +32,10 @@ if(OTELCPP_PROTO_PATH)
   endif()
   message(STATUS "opentelemetry-proto dependency satisfied by: external path")
   set(PROTO_PATH ${OTELCPP_PROTO_PATH})
-else()
-  if(EXISTS ${PROJECT_SOURCE_DIR}/third_party/opentelemetry-proto/.git)
+elseif(EXISTS ${PROJECT_SOURCE_DIR}/third_party/opentelemetry-proto/.git)
     message(STATUS "opentelemetry-proto dependency satisfied by: git submodule")
     set(PROTO_PATH
         "${PROJECT_SOURCE_DIR}/third_party/opentelemetry-proto")
-  endif()
 endif()
 
 add_thirdparty_package(
@@ -46,6 +44,10 @@ add_thirdparty_package(
   GIT_TAG ${opentelemetry-proto_GIT_TAG}
   SOURCE_DIR "${PROTO_PATH}"
 )
+
+if(NOT EXISTS ${PROTO_PATH} AND EXISTS ${opentelemetry-proto_SOURCE_DIR})
+  set(PROTO_PATH ${opentelemetry-proto_SOURCE_DIR})
+endif()
 
 set(COMMON_PROTO "${PROTO_PATH}/opentelemetry/proto/common/v1/common.proto")
 set(RESOURCE_PROTO
