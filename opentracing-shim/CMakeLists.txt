@@ -13,15 +13,9 @@ target_include_directories(
   ${this_target} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
                         "$<INSTALL_INTERFACE:include>")
 
-if(OPENTRACING_DIR)
-  target_include_directories(
-    ${this_target}
-    PUBLIC
-      "$<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/${OPENTRACING_DIR}/include>"
-      "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/${OPENTRACING_DIR}/include>"
-      "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/${OPENTRACING_DIR}/3rd_party/include>"
-  )
-  target_link_libraries(${this_target} opentelemetry_api opentracing)
+if(TARGET OpenTracing::opentracing-static)
+  target_link_libraries(${this_target} opentelemetry_api
+                        OpenTracing::opentracing-static)
 else()
   target_link_libraries(${this_target} opentelemetry_api
                         OpenTracing::opentracing)

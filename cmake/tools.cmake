@@ -220,3 +220,144 @@ function(project_build_tools_patch_default_imported_config)
     endif()
   endforeach()
 endfunction()
+
+#Add a third party package
+# Arguments:
+#   PACKAGE_NAME: The name of the package to find or fetch
+#   SEARCH_MODE: The cmake find_package search mode (e.g. MODULE, CONFIG, or empty default)
+#   FETCH_NAME: The name of the package to fetch if not found
+#   SOURCE_DIR: The directory to fetch the package into
+#   GIT_REPOSITORY: The git repository URL to fetch the package from
+#   GIT_TAG: The git tag to checkout
+#   REQUIRED_TARGETS: The targets to check for existence
+#   VERSION_REGEX: The regex to parse the package version if fetched from source or git repository
+#   VERSION_FILE: The file to read the version from if not using regex
+#   CMAKE_ARGS: The cmake arguments to pass to the package when fetching
+# Output variables set at the parent scope:
+#   <package>_FOUND: Set to TRUE if the package was found or fetched
+#   <package>_VERSION: The version of the package found or fetched
+#   <package>_PROVIDER: The provider of the package (package, fetch_source, fetch_respository)
+function(add_thirdparty_package)
+
+  set(optionArgs )
+  set(oneValueArgs PACKAGE_NAME FETCH_NAME GIT_REPOSITORY GIT_TAG SOURCE_DIR BINARY_DIR VERSION_REGEX VERSION_FILE)
+  set(multiValueArgs SEARCH_MODES REQUIRED_TARGETS CMAKE_ARGS)
+  cmake_parse_arguments(_THIRDPARTY "${optionArgs}" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
+
+  if(NOT _THIRDPARTY_PACKAGE_NAME)
+    message(FATAL_ERROR "PACKAGE_NAME is required")
+  endif()
+
+  if(NOT _THIRDPARTY_FETCH_NAME)
+    set(_THIRDPARTY_FETCH_NAME ${_THIRDPARTY_PACKAGE_NAME})
+  endif()
+
+  if(NOT _THIRDPARTY_VERSION_FILE)
+    set(_THIRDPARTY_VERSION_FILE "${PROJECT_SOURCE_DIR}/third_party_release")
+  endif()
+
+  if(NOT _THIRDPARTY_VERSION_REGEX)
+    set(_THIRDPARTY_VERSION_REGEX "${_THIRDPARTY_PACKAGE_NAME}=[ \\t]*v?([0-9]+(\\.[0-9]+)*)")
+  endif()
+
+  if(DEFINED _THIRDPARTY_GIT_REPOSITORY AND NOT _THIRDPARTY_GIT_TAG)
+    message(FATAL_ERROR "GIT_TAG is required if GIT_REPOSITORY is defined")
+  endif()
+
+  message(STATUS "Adding third party package ${_THIRDPARTY_PACKAGE_NAME}")
+  message(STATUS "  Search modes: ${_THIRDPARTY_SEARCH_MODES}")
+  message(STATUS "  Fetch name: ${_THIRDPARTY_FETCH_NAME}")
+  message(STATUS "  Source dir: ${_THIRDPARTY_SOURCE_DIR}")
+  message(STATUS "  Git repository: ${_THIRDPARTY_GIT_REPOSITORY}")
+  message(STATUS "  Git tag: ${_THIRDPARTY_GIT_TAG}")
+  message(STATUS "  Required targets: ${_THIRDPARTY_REQUIRED_TARGETS}")
+  message(STATUS "  Version regex: ${_THIRDPARTY_VERSION_REGEX}")
+  message(STATUS "  Version file: ${_THIRDPARTY_VERSION_FILE}")
+  message(STATUS "  CMake args: ${_THIRDPARTY_CMAKE_ARGS}")
+
+  foreach(_search_mode IN LISTS _THIRDPARTY_SEARCH_MODES)
+    message(STATUS "  Searching for ${_THIRDPARTY_PACKAGE_NAME} with search mode ${_search_mode}")
+    find_package(${_THIRDPARTY_PACKAGE_NAME} ${_search_mode} QUIET)
+    if(${_THIRDPARTY_PACKAGE_NAME}_FOUND)
+      message(STATUS "  Found ${_THIRDPARTY_PACKAGE_NAME} with search mode ${_search_mode}")
+      break()
+    endif()
+  endforeach()
+
+  if(${_THIRDPARTY_PACKAGE_NAME}_FOUND)
+    set("${_THIRDPARTY_PACKAGE_NAME}_PROVIDER" "package")
+  elseif(DEFINED _THIRDPARTY_SOURCE_DIR OR DEFINED _THIRDPARTY_GIT_REPOSITORY)
+    message(STATUS "  Fetching ${_THIRDPARTY_PACKAGE_NAME}")
+    # Use FetchContent to fetch the package if not found
+    include(FetchContent)
+
+    if(DEFINED _THIRDPARTY_SOURCE_DIR AND EXISTS "${_THIRDPARTY_SOURCE_DIR}/.git")
+      FetchContent_Declare(
+          ${_THIRDPARTY_FETCH_NAME}
+          SOURCE_DIR ${_THIRDPARTY_SOURCE_DIR}
+      )
+      set("${_THIRDPARTY_PACKAGE_NAME}_PROVIDER" "fetch_source")
+    elseif(DEFINED _THIRDPARTY_GIT_REPOSITORY AND DEFINED _THIRDPARTY_GIT_TAG)
+      FetchContent_Declare(
+          ${_THIRDPARTY_FETCH_NAME}
+          GIT_REPOSITORY
+          ${_THIRDPARTY_GIT_REPOSITORY}
+          GIT_TAG
+          ${_THIRDPARTY_GIT_TAG}
+      )
+      set("${_THIRDPARTY_PACKAGE_NAME}_PROVIDER" "fetch_respository")
+    else()
+      message(FATAL_ERROR "No valid source found for ${_THIRDPARTY_PACKAGE_NAME}")
+    endif()
+
+    # Set the CMake arguments (KEY=VALUE) for the third party package
+    foreach(_arg IN LISTS _THIRDPARTY_CMAKE_ARGS)
+      if(_arg MATCHES "^([^=]+)=(.*)$")
+        set(_key   "${CMAKE_MATCH_1}")
+        set(_value "${CMAKE_MATCH_2}")
+        message(DEBUG "  Setting ${_key}=${_value}")
+        set(${_key} "${_value}" CACHE STRING "" FORCE)
+      else()
+        message(WARNING "  ignoring malformed CMAKE_ARG: ${_arg}")
+      endif()
+    endforeach()
+
+    FetchContent_MakeAvailable(${_THIRDPARTY_FETCH_NAME})
+
+    set(${_THIRDPARTY_FETCH_NAME}_SOURCE_DIR ${${_THIRDPARTY_FETCH_NAME}_SOURCE_DIR} PARENT_SCOPE)
+    set(${_THIRDPARTY_FETCH_NAME}_BINARY_DIR ${${_THIRDPARTY_FETCH_NAME}_BINARY_DIR} PARENT_SCOPE)
+  endif()
+
+  # Check for required targets
+  foreach(_target ${_THIRDPARTY_REQUIRED_TARGETS})
+    if(NOT TARGET ${_target})
+      message(FATAL_ERROR "Required target ${_target} not found")
+    endif()
+  endforeach()
+
+  # Determine the package version if not already defined
+  if(NOT DEFINED ${_THIRDPARTY_PACKAGE_NAME}_VERSION)
+    if(DEFINED _THIRDPARTY_VERSION_REGEX AND DEFINED _THIRDPARTY_VERSION_FILE)
+      string(CONFIGURE "${_THIRDPARTY_VERSION_FILE}" THIRDPARTY_VERSION_FILE)
+      if(NOT EXISTS "${THIRDPARTY_VERSION_FILE}")
+        message(FATAL_ERROR "Version file ${THIRDPARTY_VERSION_FILE} does not exist")
+      endif()
+      file(READ "${THIRDPARTY_VERSION_FILE}" _file_contents)
+      string(REGEX MATCH
+            "${_THIRDPARTY_VERSION_REGEX}"
+            _version_match
+            "${_file_contents}")
+      if(_version_match)
+        set("${_THIRDPARTY_PACKAGE_NAME}_VERSION" "${CMAKE_MATCH_1}")
+      else()
+        message(WARNING "Failed to parse version from ${_THIRDPARTY_VERSION_FILE} using regex ${_THIRDPARTY_VERSION_REGEX}")
+      endif()
+    endif()
+  endif()
+
+  message(STATUS "${_THIRDPARTY_PACKAGE_NAME} version: ${${_THIRDPARTY_PACKAGE_NAME}_VERSION}")
+  message(STATUS "${_THIRDPARTY_PACKAGE_NAME} provider: ${${_THIRDPARTY_PACKAGE_NAME}_PROVIDER}")
+
+  set(${_THIRDPARTY_PACKAGE_NAME}_VERSION ${${_THIRDPARTY_PACKAGE_NAME}_VERSION} PARENT_SCOPE)
+  set(${_THIRDPARTY_PACKAGE_NAME}_PROVIDER ${${_THIRDPARTY_PACKAGE_NAME}_PROVIDER} PARENT_SCOPE)
+endfunction()

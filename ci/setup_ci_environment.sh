@@ -13,4 +13,7 @@ apt-get install --no-install-recommends --no-install-suggests -y \
                 valgrind \
                 lcov \
                 iwyu \
-                pkg-config
+                pkg-config \
+                zlib1g-dev \
+                libcurl4-openssl-dev \
+                sudo \
