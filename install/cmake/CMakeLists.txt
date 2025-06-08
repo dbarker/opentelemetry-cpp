@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 cmake_minimum_required(VERSION 3.14)
-project(opentelemetry-cpp-external-dependencies LANGUAGES CXX)
+project(opentelemetry-cpp-thirdparty-install LANGUAGES CXX)
 
 # Added in CMake 3.16. ExternalProject_Add() with GIT_SUBMODULES "" initializes
 # no submodules.
