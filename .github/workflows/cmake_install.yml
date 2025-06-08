@@ -19,7 +19,7 @@ jobs:
       CMAKE_VERSION: '3.31.6'
       # cxx17 is the default for windows-2022
       CXX_STANDARD: '17'
-      CMAKE_EXTRA_ARGS: "-DWITH_STL=CXX17 -DOTELCPP_REQUIRE_LOCAL_DEPENDENCIES=ON"
+      CMAKE_EXTRA_ARGS: "-DWITH_STL=CXX17 -DOTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY=ON"
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
@@ -46,7 +46,7 @@ jobs:
       CMAKE_VERSION: '3.15.0'
       # cxx14 is the default for windows-2019
       CXX_STANDARD: '14'
-      CMAKE_EXTRA_ARGS: "-DWITH_GSL=ON -DOTELCPP_REQUIRE_LOCAL_DEPENDENCIES=ON"
+      CMAKE_EXTRA_ARGS: "-DWITH_GSL=ON -DOTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY=ON"
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
@@ -72,7 +72,7 @@ jobs:
       CMAKE_VERSION: '3.28.3'
       # cxx17 is the default for Ubuntu 24.04
       CXX_STANDARD: '17'
-      CMAKE_EXTRA_ARGS: "-DOTELCPP_REQUIRE_LOCAL_DEPENDENCIES=ON"
+      CMAKE_EXTRA_ARGS: "-DOTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY=ON"
       BUILD_TYPE: 'Debug'
     steps:
     - name: Harden the runner (Audit all outbound calls)
@@ -109,7 +109,7 @@ jobs:
       CMAKE_VERSION: '3.28.3'
       # The default cxx standard for Ubuntu 24.04
       CXX_STANDARD: '17'
-      CMAKE_EXTRA_ARGS: "-DOTELCPP_FORCE_FETCH_DEPENDENCIES=ON"
+      CMAKE_EXTRA_ARGS: "-DOTELCPP_THIRDPARTY_FETCH_CONTENT_ONLY=ON"
       BUILD_TYPE: 'Debug'
     steps:
     - name: Harden the runner (Audit all outbound calls)
@@ -140,31 +140,28 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       INSTALL_TEST_DIR: '/home/runner/install_test'
-      CMAKE_PREFIX_PATH: '/home/runner/thirdparty-install'
+      OTELCPP_PROTO_PATH: '/home/runner/third-party/opentelemetry-proto'
       # Set to the latest version of cmake 3.x
       CMAKE_VERSION: '3.31.6'
       # Set to the latest cxx standard supported by opentelemetry-cpp
       CXX_STANDARD: '20'
-      CMAKE_EXTRA_ARGS: "-DWITH_STL=CXX20 -DOTELCPP_THIRDPARTY_FILE=third_party_latest"
+      CMAKE_EXTRA_ARGS: '-DWITH_STL=CXX20 -DOTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY=ON'
       BUILD_TYPE: 'Debug'
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
       with:
         egress-policy: audit
-
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
-        submodules: 'recursive'
+        submodules: false
     - name: Setup CI Environment
       run: |
         sudo -E ./ci/setup_ci_environment.sh
         sudo -E ./ci/setup_cmake.sh
     - name: Install Dependencies
       run: |
-        cmake -S ./install/cmake -B /home/runner/thirdparty-build -DCMAKE_CXX_STANDARD=$CXX_STANDARD -DCMAKE_INSTALL_PREFIX=/home/runner/thirdparty-install -DOTELCPP_THIRDPARTY_FILE=third_party_latest
-        cd ~/thirdparty-build
-        sudo -E make -j$(nproc)
+        sudo -E ./ci/install_thirdparty.sh /usr/local install/cmake/third_party_latest
     - name: Run Tests (static libs)
       env:
         BUILD_SHARED_LIBS: 'OFF'
@@ -175,30 +172,27 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       INSTALL_TEST_DIR: '/home/runner/install_test'
-      CMAKE_PREFIX_PATH: '/home/runner/thirdparty-install'
+      OTELCPP_PROTO_PATH: '/home/runner/third-party/opentelemetry-proto'
       # CMake 3.22 is the apt package version for Ubuntu 22.04
       CMAKE_VERSION: '3.22.0'
       CXX_STANDARD: '17'
-      CMAKE_EXTRA_ARGS: "-DWITH_STL=CXX17"
+      CMAKE_EXTRA_ARGS: "-DWITH_STL=CXX17 -DOTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY=ON"
       BUILD_TYPE: 'Debug'
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
       with:
         egress-policy: audit
-
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
-        submodules: 'recursive'
+        submodules: false
     - name: Setup CI Environment
       run: |
         sudo -E ./ci/setup_ci_environment.sh
         sudo -E ./ci/setup_cmake.sh
     - name: Install Dependencies
       run: |
-        cmake -S ./install/cmake -B /home/runner/thirdparty-build -DCMAKE_CXX_STANDARD=$CXX_STANDARD -DCMAKE_INSTALL_PREFIX=/home/runner/thirdparty-install
-        cd ~/thirdparty-build
-        sudo -E make -j$(nproc)
+        sudo -E ./ci/install_thirdparty.sh /usr/local install/cmake/third_party_stable
     - name: Run Tests (static libs)
       env:
         BUILD_SHARED_LIBS: 'OFF'
@@ -213,38 +207,28 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       INSTALL_TEST_DIR: '/home/runner/install_test'
+      OTELCPP_PROTO_PATH: '/home/runner/third-party/opentelemetry-proto'
       # Set to the current minimum version of cmake
       CMAKE_VERSION: '3.14.0'
       # cxx14 is the default for Ubuntu 22.04
       CXX_STANDARD: '14'
-      CMAKE_EXTRA_ARGS: "-DWITH_GSL=ON"
-      # This is the apt package version of googletest for Ubuntu 22.04
-      GOOGLETEST_VERSION: '1.11.0'
-      # These are minimum versions tested in the main ci workflow
-      ABSEIL_CPP_VERSION: '20220623.2'
-      PROTOBUF_VERSION: '21.12'
-      GRPC_VERSION: 'v1.49.2'
-      BUILD_TYPE: 'Debug'
+      CMAKE_EXTRA_ARGS: "-DWITH_GSL=ON -DOTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY=ON"
+      BUILD_TYPE: 'Release'
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
       with:
         egress-policy: audit
-
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
-        submodules: 'recursive'
+        submodules: false
     - name: Setup CI Environment
       run: |
         sudo -E ./ci/setup_ci_environment.sh
         sudo -E ./ci/setup_cmake.sh
     - name: Install Dependencies
       run: |
-        sudo -E apt-get install -y libcurl4-openssl-dev nlohmann-json3-dev
-        sudo -E ./ci/install_abseil.sh
-        sudo -E ./ci/setup_googletest.sh
-        sudo -E ./ci/install_protobuf.sh
-        sudo -E ./ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil-cpp
+        sudo -E ./ci/install_thirdparty.sh /usr/local install/cmake/third_party_minimum
     - name: Run Tests (static libs)
       env:
           BUILD_SHARED_LIBS: 'OFF'
@@ -262,7 +246,7 @@ jobs:
        # CMake 3.28 is apt package version for Ubuntu 24.04
       CMAKE_VERSION: '3.28.3'
       CXX_STANDARD: '17'
-      CMAKE_EXTRA_ARGS: "-DOTELCPP_REQUIRE_LOCAL_DEPENDENCIES=ON"
+      CMAKE_EXTRA_ARGS: "-DOTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY=ON"
       CMAKE_TOOLCHAIN_FILE: /home/runner/conan/build/Debug/generators/conan_toolchain.cmake
       BUILD_TYPE: 'Debug'
     steps:
@@ -310,7 +294,7 @@ jobs:
       # Set to the latest version of cmake 3.x
       CMAKE_VERSION: '3.31.6'
       CXX_STANDARD: '17'
-      CMAKE_EXTRA_ARGS: "-DOTELCPP_REQUIRE_LOCAL_DEPENDENCIES=ON"
+      CMAKE_EXTRA_ARGS: "-DOTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY=ON"
       CMAKE_TOOLCHAIN_FILE: /home/runner/conan/build/Debug/generators/conan_toolchain.cmake
       BUILD_TYPE: 'Debug'
     steps:
@@ -353,7 +337,7 @@ jobs:
       INSTALL_TEST_DIR: '/Users/runner/install_test'
       CMAKE_VERSION: '3.28.3'
       CXX_STANDARD: '17'
-      CMAKE_EXTRA_ARGS: "-DOTELCPP_REQUIRE_LOCAL_DEPENDENCIES=ON"
+      CMAKE_EXTRA_ARGS: "-DOTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY=ON"
       CMAKE_TOOLCHAIN_FILE: '/Users/runner/conan/build/Debug/generators/conan_toolchain.cmake'
       BUILD_TYPE: 'Debug'
     steps:
@@ -390,7 +374,7 @@ jobs:
       # Set to the latest version of cmake 3.x
       CMAKE_VERSION: '3.31.6'
       CXX_STANDARD: '17'
-      CMAKE_EXTRA_ARGS: "-DOTELCPP_REQUIRE_LOCAL_DEPENDENCIES=ON"
+      CMAKE_EXTRA_ARGS: "-DOTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY=ON"
       BUILD_TYPE: 'Debug'
     steps:
     - name: Harden the runner (Audit all outbound calls)

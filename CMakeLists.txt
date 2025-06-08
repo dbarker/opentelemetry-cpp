@@ -232,23 +232,23 @@ option(OPENTELEMETRY_SKIP_DYNAMIC_LOADING_TESTS
        OFF)
 
 option(
-  OTELCPP_FORCE_FETCH_DEPENDENCIES
+  OTELCPP_THIRDPARTY_FETCH_CONTENT_ONLY
   "Whether to force fetching dependencies from submodules or git repositories"
   OFF)
 
 option(
-  OTELCPP_REQUIRE_LOCAL_DEPENDENCIES
+  OTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY
   "Whether to require finding dependencies as a locally installed package or submodules"
   OFF)
 
 #
 # Verify options dependencies
 #
-if(OTELCPP_FORCE_FETCH_DEPENDENCIES AND OTELCPP_REQUIRE_LOCAL_DEPENDENCIES)
+if(OTELCPP_THIRDPARTY_FETCH_CONTENT_ONLY AND OTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY)
   message(
     FATAL_ERROR
-      "OTELCPP_FORCE_FETCH_DEPENDENCIES and "
-      "OTELCPP_REQUIRE_LOCAL_DEPENDENCIES are mutually "
+      "OTELCPP_THIRDPARTY_FETCH_CONTENT_ONLY and "
+      "OTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY are mutually "
       "exclusive options. Both can be OFF but only one can be ON.")
 endif()
 if(WITH_EXAMPLES_HTTP AND NOT WITH_EXAMPLES)

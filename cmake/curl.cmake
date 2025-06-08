@@ -9,7 +9,7 @@ endif()
 
 otel_add_thirdparty_package(
   PACKAGE_NAME "CURL"
-  PACKAGE_SEARCH_MODES "MODULE" "CONFIG"
+  PACKAGE_SEARCH_MODES "CONFIG" "MODULE" 
   FETCH_NAME "curl"
   FETCH_GIT_REPOSITORY "https://github.com/curl/curl.git"
   FETCH_GIT_TAG "${curl_GIT_TAG}"
@@ -26,7 +26,7 @@ otel_add_thirdparty_package(
 )
 
 if(NOT TARGET CURL::libcurl)
-  if(TARGET libcurl_shared AND NOT CURL_USE_STATIC_LIBS)
+  if(TARGET libcurl_shared)
     add_library(CURL::libcurl ALIAS libcurl_shared)
   elseif(TARGET libcurl_static)
     add_library(CURL::libcurl ALIAS libcurl_static)

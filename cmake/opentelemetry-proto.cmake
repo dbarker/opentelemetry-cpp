@@ -23,6 +23,11 @@
 # provided in variable ${opentelemetry-proto_GIT_TAG}
 #
 
+if(DEFINED ENV{OTELCPP_PROTO_PATH})
+  set(OTELCPP_PROTO_PATH "$ENV{OTELCPP_PROTO_PATH}")
+  message(STATUS "Using OTELCPP_PROTO_PATH from environment variable: ${OTELCPP_PROTO_PATH}")
+endif()
+
 if(OTELCPP_PROTO_PATH)
   if(NOT EXISTS
      "${OTELCPP_PROTO_PATH}/opentelemetry/proto/common/v1/common.proto")
@@ -38,16 +43,36 @@ elseif(EXISTS ${PROJECT_SOURCE_DIR}/third_party/opentelemetry-proto/.git)
     message(STATUS "opentelemetry-proto dependency satisfied by git submodule: ${PROTO_PATH}")
 endif()
 
-otel_add_thirdparty_package(
-  PACKAGE_NAME "opentelemetry-proto"
-  FETCH_GIT_REPOSITORY "https://github.com/open-telemetry/opentelemetry-proto.git"
-  FETCH_GIT_TAG "${opentelemetry-proto_GIT_TAG}"
-  FETCH_SOURCE_DIR "${PROTO_PATH}"
-)
+if(DEFINED PROTO_PATH)
+ FetchContent_Declare(
+    opentelemetry-proto
+    SOURCE_DIR "${PROTO_PATH}"
+  )
+else()
+  FetchContent_Declare(
+    opentelemetry-proto
+    GIT_REPOSITORY "https://github.com/open-telemetry/opentelemetry-proto.git"
+    GIT_TAG "${opentelemetry-proto_GIT_TAG}"
+  )
+endif()
+
+FetchContent_MakeAvailable(opentelemetry-proto)
 
 if(NOT DEFINED PROTO_PATH)
-  get_property(PROTO_PATH DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY OTEL_opentelemetry-proto_SOURCE_DIR)
+  set(PROTO_PATH ${opentelemetry-proto_SOURCE_DIR})
 endif()
+
+find_package(Git QUIET)
+if(Git_FOUND)
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} describe --tags HEAD
+    WORKING_DIRECTORY ${opentelemetry-proto_SOURCE_DIR}
+    OUTPUT_VARIABLE opentelemetry-proto_TAG_FOUND
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REGEX REPLACE "^v" "" opentelemetry-proto_VERSION "${opentelemetry-proto_TAG_FOUND}")
+endif()
+
+otel_add_thirdparty_package(PACKAGE_NAME "opentelemetry-proto")
 
 set(COMMON_PROTO "${PROTO_PATH}/opentelemetry/proto/common/v1/common.proto")
 set(RESOURCE_PROTO

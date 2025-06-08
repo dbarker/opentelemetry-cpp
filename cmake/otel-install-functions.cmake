@@ -345,7 +345,7 @@ endfunction()
 #-----------------------------------------------------------------------
 # _otel_find_package
 #   Finds a third-party package using the provided search modes.
-#  Arguments:
+#  Arguments: (from the scope of otel_add_thirdparty_package)
 #    _THIRDPARTY_PACKAGE_NAME: The name of the package to find
 #    _THIRDPARTY_PACKAGE_SEARCH_MODES: The search modes to use for finding the package (e.g., "MODULE", "CONFIG")
 #  Sets output variables at the PARENT_SCOPE:
@@ -378,30 +378,30 @@ function(_otel_find_package)
 endfunction()
 
 #-----------------------------------------------------------------------
-# _otel_fetch_package
-#   Fetches a package using FetchContent if it is not found.
-#  Arguments:
-#    PACKAGE_NAME: The name of the package to fetch
-#    FETCH_NAME: The name of the package to fetch
-#    FETCH_SOURCE_DIR: The directory to fetch the package into
-#    FETCH_GIT_REPOSITORY: The git repository URL to fetch the package from
-#    FETCH_GIT_TAG: The git tag to checkout
-#    FETCH_CMAKE_ARGS: The cmake arguments used to build the package. These are force cached variables. Be careful as they override any existing values and persist.
+# _otel_fetch_content
+#   Use FetchContent to make a package available 
+#  Arguments: (from the scope of otel_add_thirdparty_package and prefixed with _THIRDPARTY_)
+#    _THIRDPARTY_PACKAGE_NAME: The name of the package to fetch
+#    _THIRDPARTY_FETCH_NAME: The name of the package to fetch
+#    _THIRDPARTY_FETCH_SOURCE_DIR: The directory to fetch the package into
+#    _THIRDPARTY_FETCH_GIT_REPOSITORY: The git repository URL to fetch the package from
+#    _THIRDPARTY_FETCH_GIT_TAG: The git tag to checkout
+#    _THIRDPARTY_FETCH_CMAKE_ARGS: The cmake arguments used to build the package. These are force cached variables. Be careful as they override any existing values and persist.
 #  Sets output variables at the PARENT_SCOPE:
 #    <package>_SOURCE_DIR variable to the source directory of the fetched package.
 #    <package>_BINARY_DIR variable to the binary directory of the fetched package.
 #    <package>_POPULATED variable to TRUE if the package is populated, FALSE otherwise.
-function(_otel_fetch_package)
+function(_otel_fetch_content)
 
   if(DEFINED _THIRDPARTY_FETCH_SOURCE_DIR AND EXISTS "${_THIRDPARTY_FETCH_SOURCE_DIR}/.git")
-    message(STATUS "  Fetching ${_THIRDPARTY_FETCH_PACKAGE_NAME} from local source at ${_THIRDPARTY_FETCH_SOURCE_DIR}")
+    message(STATUS "  FetchContent_Declare ${_THIRDPARTY_FETCH_PACKAGE_NAME} from local source at ${_THIRDPARTY_FETCH_SOURCE_DIR}")
     FetchContent_Declare(
         ${_THIRDPARTY_FETCH_NAME}
         SOURCE_DIR ${_THIRDPARTY_FETCH_SOURCE_DIR}
     )
     set("${_THIRDPARTY_PACKAGE_NAME}_PROVIDER" "fetch_source" PARENT_SCOPE)
-  elseif( NOT OTELCPP_REQUIRE_LOCAL_DEPENDENCIES AND DEFINED _THIRDPARTY_FETCH_GIT_REPOSITORY AND DEFINED _THIRDPARTY_FETCH_GIT_TAG)
-    message(STATUS "  Fetching ${_THIRDPARTY_PACKAGE_NAME} from ${_THIRDPARTY_FETCH_GIT_REPOSITORY} at tag ${_THIRDPARTY_FETCH_GIT_TAG}")
+  elseif( DEFINED _THIRDPARTY_FETCH_GIT_REPOSITORY AND DEFINED _THIRDPARTY_FETCH_GIT_TAG)
+    message(STATUS "  FetchContent_Declare ${_THIRDPARTY_PACKAGE_NAME} from ${_THIRDPARTY_FETCH_GIT_REPOSITORY} at tag ${_THIRDPARTY_FETCH_GIT_TAG}")
     FetchContent_Declare(
         ${_THIRDPARTY_FETCH_NAME}
         GIT_REPOSITORY
@@ -481,8 +481,8 @@ endfunction()
 #   FETCH_GIT_TAG: The git tag to checkout
 #   FETCH_CMAKE_ARGS: The cmake arguments used to build the package. These are force cached variables. Be careful as they override any existing values and persist.
 #   REQUIRED_TARGETS: The targets to check for existence
-#   VERSION_REGEX: The regex to parse the package version if fetched from source or git repository. Defaults to parsing the version from the third_party_release file.
-#   VERSION_FILE: The file to read the version from when using VERSION_REGEX. Defaults to "opentelemetry-cpp/third_party_release".
+#   VERSION_REGEX: The regex to parse the package version if fetched from source or git repository.
+#   VERSION_FILE: The file to read the version from when using VERSION_REGEX.
 
 # PROJECT_SOURCE_DIR directory properties set:
 #   OTEL_THIRDPARTY_AVAILABLE_LIST: List of third-party packages available in the project
@@ -520,13 +520,6 @@ function(otel_add_thirdparty_package)
     set(_THIRDPARTY_FETCH_NAME ${_THIRDPARTY_PACKAGE_NAME})
   endif()
 
-  set(_USE_FETCH_ONLY FALSE)
-  if(OTELCPP_FORCE_FETCH_DEPENDENCIES)
-    if(DEFINED _THIRDPARTY_FETCH_SOURCE_DIR OR DEFINED _THIRDPARTY_FETCH_GIT_REPOSITORY)
-      set(_USE_FETCH_ONLY TRUE)
-    endif()
-  endif()
-
   if(DEFINED _THIRDPARTY_FETCH_GIT_REPOSITORY AND NOT _THIRDPARTY_FETCH_GIT_TAG)
     message(FATAL_ERROR "FETCH_GIT_TAG is required if FETCH_GIT_REPOSITORY is defined")
   endif()
@@ -548,12 +541,12 @@ function(otel_add_thirdparty_package)
   message(DEBUG "  Version regex: ${_THIRDPARTY_VERSION_REGEX}")
   message(DEBUG "  Version file: ${_THIRDPARTY_VERSION_FILE}")
 
-  if(NOT _USE_FETCH_ONLY)
+  if(NOT OTELCPP_THIRDPARTY_FETCH_CONTENT_ONLY)
     _otel_find_package()
   endif()
 
-  if(NOT ${_THIRDPARTY_PACKAGE_NAME}_FOUND AND _CAN_FETCH)
-    _otel_fetch_package()
+  if(NOT ${_THIRDPARTY_PACKAGE_NAME}_FOUND AND _CAN_FETCH AND NOT OTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY)
+    _otel_fetch_content()
   endif()
 
   # Check for required targets
@@ -589,7 +582,9 @@ function(otel_add_thirdparty_package)
   set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY "OTEL_${_THIRDPARTY_PACKAGE_NAME}_VERSION" "${${_THIRDPARTY_PACKAGE_NAME}_VERSION}")
   set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY "OTEL_${_THIRDPARTY_PACKAGE_NAME}_PROVIDER" "${${_THIRDPARTY_PACKAGE_NAME}_PROVIDER}")
   set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY "OTEL_${_THIRDPARTY_PACKAGE_NAME}_NAMESPACE" "${_THIRDPARTY_PACKAGE_NAMESPACE}")
-  set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY "OTEL_${_THIRDPARTY_PACKAGE_NAME}_SEARCH_MODE" "${${_THIRDPARTY_PACKAGE_NAME}_SEARCH_MODE_SELECTED}")
+  if(DEFINED "${_THIRDPARTY_PACKAGE_NAME}_SEARCH_MODE_SELECTED")
+    set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY "OTEL_${_THIRDPARTY_PACKAGE_NAME}_SEARCH_MODE" "${${_THIRDPARTY_PACKAGE_NAME}_SEARCH_MODE_SELECTED}")
+  endif()  
 
   if(NOT ${_THIRDPARTY_PACKAGE_NAME}_PROVIDER STREQUAL "package")
     set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY "OTEL_${_THIRDPARTY_PACKAGE_NAME}_SOURCE_DIR" "${${_THIRDPARTY_FETCH_NAME}_SOURCE_DIR}")
@@ -777,13 +772,11 @@ function(otel_install_cmake_config)
     "${PROJECT_SOURCE_DIR}/cmake/templates/opentelemetry-cpp-config.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}/${PROJECT_NAME}-config.cmake"
     INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
-    PATH_VARS OPENTELEMETRY_ABI_VERSION_NO OPENTELEMETRY_VERSION PROJECT_NAME
-              INCLUDE_INSTALL_DIR CMAKE_INSTALL_LIBDIR)
+    PATH_VARS INCLUDE_INSTALL_DIR CMAKE_INSTALL_LIBDIR)
 
   # Write version file for find_package(opentelemetry-cpp CONFIG)
   write_basic_package_version_file(
     "${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}/${PROJECT_NAME}-config-version.cmake"
-    VERSION ${OPENTELEMETRY_VERSION}
     COMPATIBILITY ExactVersion)
 
   install(
@@ -825,8 +818,8 @@ function(otel_print_build_config)
     message(STATUS "WITH_STL: ${WITH_STL}")
     message(STATUS "WITH_GSL: ${WITH_GSL}")
     message(STATUS "WITH_NO_GETENV: ${WITH_NO_GETENV}")
-    message(STATUS "OTELCPP_FORCE_FETCH_DEPENDENCIES: ${OTELCPP_FORCE_FETCH_DEPENDENCIES}")
-    message(STATUS "OTELCPP_REQUIRE_LOCAL_DEPENDENCIES: ${OTELCPP_REQUIRE_LOCAL_DEPENDENCIES}")
+    message(STATUS "OTELCPP_THIRDPARTY_FETCH_CONTENT_ONLY: ${OTELCPP_THIRDPARTY_FETCH_CONTENT_ONLY}")
+    message(STATUS "OTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY: ${OTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY}")
 
     message(STATUS "---------------------------------------------")
     message(STATUS "opentelemetry-cpp cmake component options")
@@ -855,6 +848,7 @@ function(otel_print_build_config)
     message(STATUS "WITH_REMOVE_METER_PREVIEW: ${WITH_REMOVE_METER_PREVIEW}")
     message(
       STATUS "WITH_OTLP_GRPC_SSL_MTLS_PREVIEW: ${WITH_OTLP_GRPC_SSL_MTLS_PREVIEW}")
+    message(STATUS "WITH_OTLP_GRPC_CREDENTIAL_PREVIEW: ${WITH_OTLP_GRPC_CREDENTIAL_PREVIEW}")
     message(STATUS "WITH_OTLP_RETRY_PREVIEW: ${WITH_OTLP_RETRY_PREVIEW}")
     message(STATUS "---------------------------------------------")
     message(STATUS "third-party options")
