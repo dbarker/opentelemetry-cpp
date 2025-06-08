@@ -38,6 +38,7 @@ ENV USER_UID=${USER_UID}
 ENV USER_GID=${USER_GID}
 ENV IS_CONTAINER_BUILD=true
 
+COPY install /opt/install
 COPY ./.devcontainer/customize_container.sh /tmp/opentelemetry_cpp/devcontainer/customize_container.sh
 RUN /tmp/opentelemetry_cpp/devcontainer/customize_container.sh
 RUN apt install -y npm && npm install -g markdownlint-cli@0.44.0
@@ -45,6 +46,8 @@ RUN apt install -y npm && npm install -g markdownlint-cli@0.44.0
 USER devuser
 
 WORKDIR  /workspaces/opentelemetry-cpp
+RUN /opt/ci/install_thirdparty.sh /home/devuser/third-party/install-stable /opt/install/cmake/third_party_stable
+ENV CMAKE_PREFIX_PATH=/home/devuser/third-party/install-stable
 
 ENTRYPOINT []
 
