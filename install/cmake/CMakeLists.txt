@@ -20,21 +20,40 @@ endif()
 # opentelemetry-cpp dependencies
 
 include(ExternalProject)
-set(OPENTELEMETRY_CPP_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
-get_filename_component(OPENTELEMETRY_CPP_SOURCE_DIR "${OPENTELEMETRY_CPP_SOURCE_DIR}" ABSOLUTE)
 
-include(${OPENTELEMETRY_CPP_SOURCE_DIR}/cmake/version.cmake)
+# Set the third-party version tags file to read. 
+set(OTELCPP_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
+get_filename_component(OTELCPP_SOURCE_DIR "${OTELCPP_SOURCE_DIR}" ABSOLUTE)
 
-message(STATUS "Installing packages....")
-message(STATUS "Set git tags from file: ${OTELCPP_THIRDPARTY_FILE}")
-foreach(_package IN LISTS OTELCPP_THIRDPARTY_PACKAGE_LIST)
-  message(STATUS " - ${_package}: ${${_package}_GIT_TAG}")
+if(NOT DEFINED OTELCPP_THIRDPARTY_FILE)
+  set(OTELCPP_THIRDPARTY_FILE "${OTELCPP_SOURCE_DIR}/third_party_release")
+elseif(NOT IS_ABSOLUTE OTELCPP_THIRDPARTY_FILE)
+  string(PREPEND OTELCPP_THIRDPARTY_FILE "${OTELCPP_SOURCE_DIR}/")
+endif()
+
+message(STATUS "Reading third-party version tags from ${OTELCPP_THIRDPARTY_FILE} ...")
+
+file(STRINGS "${OTELCPP_THIRDPARTY_FILE}" _THIRDPARTY_FILE_CONTENT)
+set(_THIRDPARTY_PACKAGE_LIST "")
+
+# Parse the third-party tags file
+foreach(_raw_line IN LISTS _THIRDPARTY_FILE_CONTENT)
+    string(STRIP "${_raw_line}" _line)
+    if(_line STREQUAL "" OR _line MATCHES "^#")
+      continue()
+    endif()
+
+    # Match "package_name=git_tag"
+    if(_line MATCHES "^([^=]+)=(.+)$")
+      set(_package   "${CMAKE_MATCH_1}")
+      set(_git_tag  "${CMAKE_MATCH_2}")
+      set("${_package}_GIT_TAG" "${_git_tag}")
+      list(APPEND _THIRDPARTY_PACKAGE_LIST "${_package}")
+      message(STATUS " - ${_package}: ${${_package}_GIT_TAG}")
+    else()
+      message(FATAL_ERROR "Could not parse third-party tag. Invalid line in ${OTELCPP_THIRDPARTY_FILE}. Line:\n  ${_raw_line}")
+    endif()
 endforeach()
-
-message(STATUS)
-message(STATUS "Installing to CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
-
-message(STATUS "OTELCPP_PROTO_PATH=${OTELCPP_PROTO_PATH}")
 
 if(OTELCPP_THIRDPARTY_FILE STREQUAL "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party_release")
   set(USE_SUBMODULES ON)
@@ -54,6 +73,14 @@ set(CMAKE_OPTIONS
     "-DCMAKE_CXX_STANDARD_REQUIRED=ON"
     "-DCMAKE_CXX_EXTENSIONS=OFF"
     "-DCMAKE_POSITION_INDEPENDENT_CODE=ON")
+
+message(STATUS "Installing third-party packages....")
+message(STATUS "  opentelemetry-cpp_SOURCE_DIR = ${OTELCPP_SOURCE_DIR}")
+message(STATUS "  third-party packages = ${_THIRDPARTY_PACKAGE_LIST}")
+message(STATUS "  third-party tags file = ${OTELCPP_THIRDPARTY_FILE}")
+message(STATUS "  opentelemetry-proto path = ${OTELCPP_PROTO_PATH}")
+message(STATUS "  CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
+message(STATUS "  CMAKE_OPTIONS=${CMAKE_OPTIONS}")
 
 # ------------------------------------------------------------------------
 # ---- zlib ----
