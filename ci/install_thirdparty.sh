@@ -33,7 +33,6 @@ if [ ! -f "${SRC_DIR}/install/cmake/CMakeLists.txt" ]; then
     echo "Error: ${SRC_DIR}/install/cmake/CMakeLists.txt not found"
     echo "Please run this script from the root of the opentelemetry-cpp repository"
     usage
-    exit 1
 fi
 
 mkdir -p "${THRIDPARTY_BUILD_DIR}"

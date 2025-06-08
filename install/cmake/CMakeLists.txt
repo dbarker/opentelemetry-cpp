@@ -21,7 +21,7 @@ endif()
 
 include(ExternalProject)
 
-# Set the third-party version tags file to read. 
+# Set the third-party version tags file to read.
 set(OTELCPP_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
 get_filename_component(OTELCPP_SOURCE_DIR "${OTELCPP_SOURCE_DIR}" ABSOLUTE)
 
@@ -31,31 +31,36 @@ elseif(NOT IS_ABSOLUTE OTELCPP_THIRDPARTY_FILE)
   string(PREPEND OTELCPP_THIRDPARTY_FILE "${OTELCPP_SOURCE_DIR}/")
 endif()
 
-message(STATUS "Reading third-party version tags from ${OTELCPP_THIRDPARTY_FILE} ...")
+message(
+  STATUS "Reading third-party version tags from ${OTELCPP_THIRDPARTY_FILE} ...")
 
 file(STRINGS "${OTELCPP_THIRDPARTY_FILE}" _THIRDPARTY_FILE_CONTENT)
 set(_THIRDPARTY_PACKAGE_LIST "")
 
 # Parse the third-party tags file
 foreach(_raw_line IN LISTS _THIRDPARTY_FILE_CONTENT)
-    string(STRIP "${_raw_line}" _line)
-    if(_line STREQUAL "" OR _line MATCHES "^#")
-      continue()
-    endif()
+  string(STRIP "${_raw_line}" _line)
+  if(_line STREQUAL "" OR _line MATCHES "^#")
+    continue()
+  endif()
 
-    # Match "package_name=git_tag"
-    if(_line MATCHES "^([^=]+)=(.+)$")
-      set(_package   "${CMAKE_MATCH_1}")
-      set(_git_tag  "${CMAKE_MATCH_2}")
-      set("${_package}_GIT_TAG" "${_git_tag}")
-      list(APPEND _THIRDPARTY_PACKAGE_LIST "${_package}")
-      message(STATUS " - ${_package}: ${${_package}_GIT_TAG}")
-    else()
-      message(FATAL_ERROR "Could not parse third-party tag. Invalid line in ${OTELCPP_THIRDPARTY_FILE}. Line:\n  ${_raw_line}")
-    endif()
+  # Match "package_name=git_tag"
+  if(_line MATCHES "^([^=]+)=(.+)$")
+    set(_package "${CMAKE_MATCH_1}")
+    set(_git_tag "${CMAKE_MATCH_2}")
+    set("${_package}_GIT_TAG" "${_git_tag}")
+    list(APPEND _THIRDPARTY_PACKAGE_LIST "${_package}")
+    message(STATUS " - ${_package}: ${${_package}_GIT_TAG}")
+  else()
+    message(
+      FATAL_ERROR
+        "Could not parse third-party tag. Invalid line in ${OTELCPP_THIRDPARTY_FILE}. Line:\n  ${_raw_line}"
+    )
+  endif()
 endforeach()
 
-if(OTELCPP_THIRDPARTY_FILE STREQUAL "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party_release")
+if(OTELCPP_THIRDPARTY_FILE STREQUAL
+   "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party_release")
   set(USE_SUBMODULES ON)
 else()
   set(USE_SUBMODULES OFF)
@@ -192,7 +197,8 @@ set(benchmark_ARGS
     "-DBENCHMARK_ENABLE_INSTALL=ON"
     "-DBUILD_SHARED_LIBS=ON")
 
-if(USE_SUBMODULES AND EXISTS "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party/benchmark/.git")
+if(USE_SUBMODULES
+   AND EXISTS "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party/benchmark/.git")
   message(STATUS "Using submodule for benchmark")
   ExternalProject_Add(
     benchmark
@@ -220,7 +226,8 @@ set(googletest_ARGS
     "-DBUILD_GMOCK=ON"
     "-DBUILD_SHARED_LIBS=ON")
 
-if(USE_SUBMODULES AND EXISTS "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party/googletest/.git")
+if(USE_SUBMODULES
+   AND EXISTS "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party/googletest/.git")
   message(STATUS "Using submodule for googletest")
   ExternalProject_Add(
     googletest
@@ -247,7 +254,8 @@ set(ms-gsl_ARGS
     "-DGSL_TEST=OFF"
     "-DGSL_INSTALL=ON")
 
-if(USE_SUBMODULES AND EXISTS "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party/ms-gsl/.git")
+if(USE_SUBMODULES AND EXISTS
+                      "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party/ms-gsl/.git")
   message(STATUS "Using submodule for ms-gsl")
   ExternalProject_Add(
     ms-gsl
@@ -275,7 +283,8 @@ set(nhlohmann-json_ARGS
     "-DJSON_Install=ON"
     "-DJSON_MultipleHeaders=OFF")
 
-if(USE_SUBMODULES AND EXISTS "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party/nlohmann-json/.git")
+if(USE_SUBMODULES
+   AND EXISTS "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party/nlohmann-json/.git")
   message(STATUS "Using submodule for nlohmann-json")
   ExternalProject_Add(
     nlohmann-json
@@ -293,7 +302,9 @@ endif()
 # ----------------------------------------------------------------------
 # ---- opentelemetry-proto ----
 if(DEFINED OTELCPP_PROTO_PATH)
-  message(STATUS "Adding opentelemetry-proto: OTELCPP_PROTO_PATH: ${OTELCPP_PROTO_PATH}")
+  message(
+    STATUS
+      "Adding opentelemetry-proto: OTELCPP_PROTO_PATH: ${OTELCPP_PROTO_PATH}")
   ExternalProject_Add(
     opentelemetry-proto
     GIT_REPOSITORY "https://github.com/open-telemetry/opentelemetry-proto.git"
@@ -317,7 +328,9 @@ set(opentracing-cpp_ARGS
     "${CMAKE_OPTIONS}"
     "-DBUILD_TESTING=OFF")
 
-if(USE_SUBMODULES AND EXISTS "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party/opentracing-cpp/.git")
+if(USE_SUBMODULES
+   AND EXISTS
+       "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party/opentracing-cpp/.git")
   message(STATUS "Using submodule for opentracing-cpp")
   ExternalProject_Add(
     opentracing-cpp
@@ -350,7 +363,8 @@ set(prometheus-cpp_ARGS
     "-DENABLE_PUSH=ON"
     "-DENABLE_PULL=ON")
 
-if(USE_SUBMODULES AND EXISTS "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party/prometheus-cpp/.git")
+if(USE_SUBMODULES
+   AND EXISTS "${OPENTELEMETRY_CPP_SOURCE_DIR}/third_party/prometheus-cpp/.git")
   message(STATUS "Using submodule for prometheus-cpp")
   ExternalProject_Add(
     prometheus-cpp

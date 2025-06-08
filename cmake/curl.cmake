@@ -9,7 +9,7 @@ endif()
 
 otel_add_thirdparty_package(
   PACKAGE_NAME "CURL"
-  PACKAGE_SEARCH_MODES "CONFIG" "MODULE" 
+  PACKAGE_SEARCH_MODES "CONFIG" "MODULE"
   FETCH_NAME "curl"
   FETCH_GIT_REPOSITORY "https://github.com/curl/curl.git"
   FETCH_GIT_TAG "${curl_GIT_TAG}"

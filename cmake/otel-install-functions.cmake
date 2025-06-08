@@ -379,7 +379,7 @@ endfunction()
 
 #-----------------------------------------------------------------------
 # _otel_fetch_content
-#   Use FetchContent to make a package available 
+#   Use FetchContent to make a package available
 #  Arguments: (from the scope of otel_add_thirdparty_package and prefixed with _THIRDPARTY_)
 #    _THIRDPARTY_PACKAGE_NAME: The name of the package to fetch
 #    _THIRDPARTY_FETCH_NAME: The name of the package to fetch
@@ -584,7 +584,7 @@ function(otel_add_thirdparty_package)
   set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY "OTEL_${_THIRDPARTY_PACKAGE_NAME}_NAMESPACE" "${_THIRDPARTY_PACKAGE_NAMESPACE}")
   if(DEFINED "${_THIRDPARTY_PACKAGE_NAME}_SEARCH_MODE_SELECTED")
     set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY "OTEL_${_THIRDPARTY_PACKAGE_NAME}_SEARCH_MODE" "${${_THIRDPARTY_PACKAGE_NAME}_SEARCH_MODE_SELECTED}")
-  endif()  
+  endif()
 
   if(NOT ${_THIRDPARTY_PACKAGE_NAME}_PROVIDER STREQUAL "package")
     set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY "OTEL_${_THIRDPARTY_PACKAGE_NAME}_SOURCE_DIR" "${${_THIRDPARTY_FETCH_NAME}_SOURCE_DIR}")

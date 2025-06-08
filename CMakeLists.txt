@@ -233,18 +233,19 @@ option(OPENTELEMETRY_SKIP_DYNAMIC_LOADING_TESTS
 
 option(
   OTELCPP_THIRDPARTY_FETCH_CONTENT_ONLY
-  "Whether to force fetching dependencies from submodules or git repositories"
+  "Whether to require use of FetchContent to satisfy dependencies from submodules or GitHub repositories"
   OFF)
 
 option(
   OTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY
-  "Whether to require finding dependencies as a locally installed package or submodules"
+  "Whether to require use of find_package to satisfy dependencies with locally installed packages"
   OFF)
 
 #
 # Verify options dependencies
 #
-if(OTELCPP_THIRDPARTY_FETCH_CONTENT_ONLY AND OTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY)
+if(OTELCPP_THIRDPARTY_FETCH_CONTENT_ONLY
+   AND OTELCPP_THIRDPARTY_FIND_PACKAGE_ONLY)
   message(
     FATAL_ERROR
       "OTELCPP_THIRDPARTY_FETCH_CONTENT_ONLY and "
