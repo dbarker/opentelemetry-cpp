@@ -439,7 +439,7 @@ function(_otel_fetch_content)
 
     # Set the CMake cache variables (KEY=VALUE) for the third party package
     foreach(_arg IN LISTS _THIRDPARTY_FETCH_CMAKE_ARGS)
-      if(_arg MATCHES "^([^=]+)=(.*)$")
+      if(_arg MATCHES "^-D([^=]+)=(.*)$")
         set(_key   "${CMAKE_MATCH_1}")
         set(_value "${CMAKE_MATCH_2}")
         message(DEBUG "  Setting ${_key}=${_value}")
@@ -495,7 +495,7 @@ endfunction()
 #   OTEL_<package>_POPULATED: Set if the package was populated by FetchContent
 function(otel_add_thirdparty_package)
 
-  set(optionArgs )
+  set(optionArgs FETCH_ALWAYS FIND_ALWAYS FETCH_NEVER FIND_NEVER)
   set(oneValueArgs PACKAGE_NAME PACKAGE_NAMESPACE FETCH_NAME FETCH_GIT_REPOSITORY FETCH_GIT_TAG FETCH_SOURCE_DIR VERSION_REGEX VERSION_FILE)
   set(multiValueArgs PACKAGE_SEARCH_MODES FETCH_GIT_SUBMODULES FETCH_CMAKE_ARGS REQUIRED_TARGETS )
   cmake_parse_arguments(_THIRDPARTY "${optionArgs}" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")

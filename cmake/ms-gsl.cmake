@@ -9,8 +9,8 @@ otel_add_thirdparty_package(
   FETCH_GIT_TAG "${ms-gsl_GIT_TAG}"
   FETCH_SOURCE_DIR "${PROJECT_SOURCE_DIR}/third_party/ms-gsl"
   FETCH_CMAKE_ARGS
-    GSL_TEST=OFF
-    GSL_INSTALL=${OPENTELEMETRY_INSTALL}
+    "-DGSL_TEST=OFF"
+    "-DGSL_INSTALL=${OPENTELEMETRY_INSTALL}"
   REQUIRED_TARGETS "Microsoft.GSL::GSL"
   VERSION_REGEX "project\\([^\\)]*VERSION[ \t]*([0-9]+(\\.[0-9]+)*(\\.[0-9]+)*)"
   VERSION_FILE "\${GSL_SOURCE_DIR}/CMakeLists.txt"

@@ -22,9 +22,9 @@ else()
     FETCH_GIT_REPOSITORY "https://github.com/protocolbuffers/protobuf.git"
     FETCH_GIT_TAG "${protobuf_GIT_TAG}"
     FETCH_CMAKE_ARGS
-      protobuf_INSTALL=${OPENTELEMETRY_INSTALL}
-      protobuf_BUILD_TESTS=OFF
-      protobuf_BUILD_EXAMPLES=OFF
+      "-Dprotobuf_INSTALL=${OPENTELEMETRY_INSTALL}"
+      "-Dprotobuf_BUILD_TESTS=OFF"
+      "-Dprotobuf_BUILD_EXAMPLES=OFF"
     REQUIRED_TARGETS "protobuf::libprotobuf"
     VERSION_REGEX "\"cpp\"[ \t]*:[ \t]*\"([0-9]+\\.[0-9]+(\\.[0-9]+)?)\""
     VERSION_FILE "\${protobuf_SOURCE_DIR}/version.json"

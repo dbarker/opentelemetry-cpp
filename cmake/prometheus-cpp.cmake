@@ -9,9 +9,9 @@ otel_add_thirdparty_package(
   FETCH_SOURCE_DIR "${PROJECT_SOURCE_DIR}/third_party/prometheus-cpp"
   FETCH_GIT_SUBMODULES "3rdparty/civetweb"
   FETCH_CMAKE_ARGS
-    ENABLE_TESTING=OFF
-    ENABLE_PUSH=OFF
-    USE_THIRDPARTY_LIBRARIES=ON
+    "-DENABLE_TESTING=OFF"
+    "-DENABLE_PUSH=OFF"
+    "-DUSE_THIRDPARTY_LIBRARIES=ON"
   REQUIRED_TARGETS "prometheus-cpp::core;prometheus-cpp::pull"
   VERSION_REGEX "project\\([^\\)]*VERSION[ \t]*([0-9]+(\\.[0-9]+)*(\\.[0-9]+)*)"
   VERSION_FILE "\${prometheus-cpp_SOURCE_DIR}/CMakeLists.txt"

@@ -9,8 +9,8 @@ otel_add_thirdparty_package(
   FETCH_GIT_TAG "${googletest_GIT_TAG}"
   FETCH_SOURCE_DIR "${PROJECT_SOURCE_DIR}/third_party/googletest"
   FETCH_CMAKE_ARGS
-    INSTALL_GTEST=${OPENTELEMETRY_INSTALL}
-    BUILD_GMOCK=ON
+    "-DINSTALL_GTEST=${OPENTELEMETRY_INSTALL}"
+    "-DBUILD_GMOCK=ON"
   REQUIRED_TARGETS "GTest::gtest;GTest::gtest_main;GTest::gmock"
   VERSION_REGEX "set\\s*\\(\\s*GOOGLETEST_VERSION[ \t]+([0-9]+(\\.[0-9]+)*)([ \t]|\\))"
   VERSION_FILE "\${googletest_SOURCE_DIR}/CMakeLists.txt"

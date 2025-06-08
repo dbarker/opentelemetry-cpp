@@ -8,8 +8,8 @@ otel_add_thirdparty_package(
   FETCH_GIT_TAG ${benchmark_GIT_TAG}
   FETCH_SOURCE_DIR "${PROJECT_SOURCE_DIR}/third_party/benchmark"
   FETCH_CMAKE_ARGS
-    BENCHMARK_ENABLE_TESTING=OFF
-    BENCHMARK_ENABLE_INSTALL=${OPENTELEMETRY_INSTALL}
+    "-DBENCHMARK_ENABLE_TESTING=OFF"
+    "-DBENCHMARK_ENABLE_INSTALL=${OPENTELEMETRY_INSTALL}"
   REQUIRED_TARGETS "benchmark::benchmark"
   VERSION_REGEX "project.*\\([^\\)]*VERSION[ \t]*([0-9]+(\\.[0-9]+)*(\\.[0-9]+)*)"
   VERSION_FILE "\${benchmark_SOURCE_DIR}/CMakeLists.txt"

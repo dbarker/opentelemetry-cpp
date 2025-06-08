@@ -9,7 +9,7 @@ otel_add_thirdparty_package(
   FETCH_GIT_TAG "${opentracing-cpp_GIT_TAG}"
   FETCH_SOURCE_DIR "${PROJECT_SOURCE_DIR}/third_party/opentracing-cpp"
   FETCH_CMAKE_ARGS
-    BUILD_TESTING=OFF
+    "-DBUILD_TESTING=OFF"
   VERSION_REGEX "#define[ \t]+OPENTRACING_VERSION[ \t]+\"([0-9]+(\\.[0-9]+)*)\""
   VERSION_FILE "\${opentracing_BINARY_DIR}/include/opentracing/version.h"
 )
