@@ -33,32 +33,16 @@ FetchContent_Declare(opentelemetry-cpp SOURCE_DIR ${OPENTELEMETRY_CPP_SRC_DIR})
 
 FetchContent_MakeAvailable(googletest opentelemetry-cpp)
 
-# Set the OPENTELEMETRY_VERSION variable by parsing the version header file
-include("${opentelemetry-cpp_SOURCE_DIR}/cmake/version.cmake")
-
-# Check the parsed OPENTELEMETRY_VERSION and the property set to the
-# opentelemetry-cpp_SOURCE_DIR matches
-get_property(
-  _otel_cpp_version
-  DIRECTORY "${opentelemetry-cpp_SOURCE_DIR}"
-  PROPERTY OPENTELEMETRY_VERSION)
-
-if(NOT DEFINED _otel_cpp_version OR NOT _otel_cpp_version STREQUAL
-                                    OPENTELEMETRY_VERSION)
+if(NOT DEFINED OPENTELEMETRY_VERSION OR OPENTELEMETRY_VERSION
+                                        VERSION_LESS_EQUAL 0.0.0)
   message(
     FATAL_ERROR
-      "OpenTelemetry C++ version mismatch: expected ${OPENTELEMETRY_CPP_VERSION}, "
-      "but got ${_otel_cpp_version}")
+      "OpenTelemetry C++ version not set after FetchContent_MakeAvailable(opentelemetry-cpp)."
+  )
 endif()
 
-# Check the OPENTELEMETRY_ABI_VERSION_NO property is set to the
-# opentelemetry-cpp_SOURCE_DIR
-get_property(
-  _otel_cpp_abi_version_no
-  DIRECTORY "${opentelemetry-cpp_SOURCE_DIR}"
-  PROPERTY OPENTELEMETRY_ABI_VERSION_NO)
-
-if(NOT DEFINED _otel_cpp_abi_version_no)
+if(NOT DEFINED OPENTELEMETRY_ABI_VERSION_NO OR OPENTELEMETRY_ABI_VERSION_NO
+                                               LESS 1)
   message(
     FATAL_ERROR
       "OpenTelemetry C++ ABI version number not defined in the source directory"
@@ -67,7 +51,7 @@ endif()
 
 message(
   STATUS
-    "OpenTelemetry C++ version: ${_otel_cpp_version}, ABI version: ${_otel_cpp_abi_version_no}"
+    "OpenTelemetry C++ version: ${OPENTELEMETRY_VERSION}, ABI version: ${OPENTELEMETRY_ABI_VERSION_NO}"
 )
 
 add_executable(

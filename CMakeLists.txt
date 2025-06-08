@@ -85,12 +85,6 @@ else()
   set(OPENTELEMETRY_ABI_VERSION_NO ${OPENTELEMETRY_ABI_VERSION_DEFAULT})
 endif()
 
-set_property(DIRECTORY "${opentelemetry-cpp_SOURCE_DIR}"
-             PROPERTY OPENTELEMETRY_VERSION ${OPENTELEMETRY_VERSION})
-set_property(
-  DIRECTORY "${opentelemetry-cpp_SOURCE_DIR}"
-  PROPERTY OPENTELEMETRY_ABI_VERSION_NO "${OPENTELEMETRY_ABI_VERSION_NO}")
-
 option(WITH_NO_DEPRECATED_CODE "Do not include deprecated code" OFF)
 
 set(WITH_STL
@@ -507,3 +501,13 @@ if(OPENTELEMETRY_INSTALL)
     include(CPack)
   endif()
 endif()
+
+# Make the version and ABI version available to the user for in-tree builds
+# These are the same variables that are cached with
+# find_package(opentelemetry-cpp CONFIG)
+set(OPENTELEMETRY_ABI_VERSION_NO
+    "${OPENTELEMETRY_ABI_VERSION_NO}"
+    CACHE STRING "opentelemetry-cpp ABI version" FORCE)
+set(OPENTELEMETRY_VERSION
+    "${OPENTELEMETRY_VERSION}"
+    CACHE STRING "opentelemetry-cpp version" FORCE)
