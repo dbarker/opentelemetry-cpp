@@ -46,7 +46,7 @@ RUN apt install -y npm && npm install -g markdownlint-cli@0.44.0
 USER devuser
 
 WORKDIR  /workspaces/opentelemetry-cpp
-RUN /opt/ci/install_thirdparty.sh /home/devuser/third-party/install-stable /opt/install/cmake/third_party_stable
+RUN cd /opt && bash ci/install_thirdparty.sh /home/devuser/third-party/install-stable install/cmake/third_party_stable
 ENV CMAKE_PREFIX_PATH=/home/devuser/third-party/install-stable
 
 ENTRYPOINT []
