@@ -17,7 +17,6 @@ COPY ci /opt/ci
 
 RUN apt update && apt install -y wget \
     ninja-build \
-    zlib1g-dev \
     llvm-dev \
     libclang-dev \
     clang-tidy \

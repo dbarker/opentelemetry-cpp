@@ -79,9 +79,6 @@ jobs:
     env:
       CC: /usr/bin/gcc-14
       CXX: /usr/bin/g++-14
-      ABSEIL_CPP_VERSION: '20220623.2'
-      PROTOBUF_VERSION: '21.12'
-      GRPC_VERSION: 'v1.49.2'
       CXX_STANDARD: '14'
     steps:
     - name: Harden the runner (Audit all outbound calls)
@@ -93,15 +90,11 @@ jobs:
         submodules: 'recursive'
     - name: setup
       run: |
-        sudo apt remove needrestart #refer: https://github.com/actions/runner-images/issues/9937
         sudo -E ./ci/setup_ci_environment.sh
         sudo -E ./ci/setup_cmake.sh
-        sudo apt install -y libbenchmark-dev zlib1g-dev libcurl4-openssl-dev
-    - name: setup grpc
+    - name: install dependencies
       run: |
-        sudo -E ./ci/install_abseil.sh
-        sudo -E ./ci/install_protobuf.sh
-        sudo -E ./ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil-cpp
+        sudo -E ./ci/install_thirdparty.sh /usr/local third_party_release
     - name: run cmake gcc (maintainer mode, sync)
       run: |
         ./ci/do_ci.sh cmake.maintainer.sync.test
@@ -121,9 +114,6 @@ jobs:
     env:
       CC: /usr/bin/gcc-14
       CXX: /usr/bin/g++-14
-      ABSEIL_CPP_VERSION: '20220623.2'
-      PROTOBUF_VERSION: '21.12'
-      GRPC_VERSION: 'v1.49.2'
       CXX_STANDARD: '14'
     steps:
     - name: Harden the runner (Audit all outbound calls)
@@ -135,15 +125,11 @@ jobs:
         submodules: 'recursive'
     - name: setup
       run: |
-        sudo apt remove needrestart #refer: https://github.com/actions/runner-images/issues/9937
         sudo -E ./ci/setup_ci_environment.sh
         sudo -E ./ci/setup_cmake.sh
-        sudo apt install -y libbenchmark-dev zlib1g-dev libcurl4-openssl-dev
-    - name: setup grpc
+    - name: install dependencies
       run: |
-        sudo -E ./ci/install_abseil.sh
-        sudo -E ./ci/install_protobuf.sh
-        sudo -E ./ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil-cpp
+        sudo -E ./ci/install_thirdparty.sh /usr/local third_party_release
     - name: run cmake gcc (maintainer mode, async)
       run: |
         ./ci/do_ci.sh cmake.maintainer.async.test
@@ -163,9 +149,6 @@ jobs:
     env:
       CC: /usr/bin/clang-18
       CXX: /usr/bin/clang++-18
-      ABSEIL_CPP_VERSION: '20220623.2'
-      PROTOBUF_VERSION: '21.12'
-      GRPC_VERSION: 'v1.49.2'
       CXX_STANDARD: '14'
     steps:
     - name: Harden the runner (Audit all outbound calls)
@@ -177,15 +160,11 @@ jobs:
         submodules: 'recursive'
     - name: setup
       run: |
-        sudo apt remove needrestart #refer: https://github.com/actions/runner-images/issues/9937
         sudo -E ./ci/setup_ci_environment.sh
         sudo -E ./ci/setup_cmake.sh
-        sudo apt install -y libbenchmark-dev zlib1g-dev libcurl4-openssl-dev
-    - name: setup grpc
+    - name: install dependencies
       run: |
-        sudo -E ./ci/install_abseil.sh
-        sudo -E ./ci/install_protobuf.sh
-        sudo -E ./ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil-cpp
+        sudo -E ./ci/install_thirdparty.sh /usr/local third_party_release
     - name: run cmake clang (maintainer mode, sync)
       run: |
         ./ci/do_ci.sh cmake.maintainer.sync.test
@@ -205,9 +184,6 @@ jobs:
     env:
       CC: /usr/bin/clang-18
       CXX: /usr/bin/clang++-18
-      ABSEIL_CPP_VERSION: '20220623.2'
-      PROTOBUF_VERSION: '21.12'
-      GRPC_VERSION: 'v1.49.2'
       CXX_STANDARD: '14'
     steps:
     - name: Harden the runner (Audit all outbound calls)
@@ -219,15 +195,11 @@ jobs:
         submodules: 'recursive'
     - name: setup
       run: |
-        sudo apt remove needrestart #refer: https://github.com/actions/runner-images/issues/9937
         sudo -E ./ci/setup_ci_environment.sh
         sudo -E ./ci/setup_cmake.sh
-        sudo apt install -y libbenchmark-dev zlib1g-dev libcurl4-openssl-dev
-    - name: setup grpc
+    - name: install dependencies
       run: |
-        sudo -E ./ci/install_abseil.sh
-        sudo -E ./ci/install_protobuf.sh
-        sudo -E ./ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil-cpp
+        sudo -E ./ci/install_thirdparty.sh /usr/local third_party_release
     - name: run cmake clang (maintainer mode, async)
       run: |
         ./ci/do_ci.sh cmake.maintainer.async.test
@@ -247,9 +219,6 @@ jobs:
     env:
       CC: /usr/bin/clang-18
       CXX: /usr/bin/clang++-18
-      ABSEIL_CPP_VERSION: '20220623.2'
-      PROTOBUF_VERSION: '21.12'
-      GRPC_VERSION: 'v1.49.2'
       CXX_STANDARD: '14'
     steps:
     - name: Harden the runner (Audit all outbound calls)
@@ -261,15 +230,11 @@ jobs:
         submodules: 'recursive'
     - name: setup
       run: |
-        sudo apt remove needrestart #refer: https://github.com/actions/runner-images/issues/9937
         sudo -E ./ci/setup_ci_environment.sh
         sudo -E ./ci/setup_cmake.sh
-        sudo apt install -y libbenchmark-dev zlib1g-dev libcurl4-openssl-dev
-    - name: setup grpc
+    - name: install dependencies
       run: |
-        sudo -E ./ci/install_abseil.sh
-        sudo -E ./ci/install_protobuf.sh
-        sudo -E ./ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil-cpp
+        sudo -E ./ci/install_thirdparty.sh /usr/local third_party_release
     - name: run cmake clang (maintainer mode, abiv2)
       run: |
         ./ci/do_ci.sh cmake.maintainer.abiv2.test
@@ -584,9 +549,6 @@ jobs:
     name: CMake test (with modern protobuf,grpc and abseil)
     runs-on: ubuntu-latest
     env:
-      ABSEIL_CPP_VERSION: '20230125.3'
-      PROTOBUF_VERSION: '23.3'
-      GRPC_VERSION: 'v1.55.0'
       CXX_STANDARD: '14'
     steps:
     - name: Harden the runner (Audit all outbound calls)
@@ -600,11 +562,9 @@ jobs:
       run: |
         sudo -E ./ci/setup_ci_environment.sh
         sudo -E ./ci/setup_cmake.sh
-    - name: Install Dependencies
+    - name: install dependencies
       run: |
-        sudo -E ./ci/install_abseil.sh
-        sudo -E ./ci/install_protobuf.sh
-        sudo -E ./ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil-cpp
+        sudo -E ./ci/install_thirdparty.sh /usr/local install/cmake/third_party_stable
     - name: run otlp exporter tests
       run: |
         ./ci/do_ci.sh cmake.exporter.otprotocol.test
@@ -955,8 +915,6 @@ jobs:
         egress-policy: audit
 
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    - name: setup
-      run: sudo apt remove needrestart && sudo ./ci/install_format_tools.sh #refer: https://github.com/actions/runner-images/issues/9937
     - name: run tests
       run: ./ci/do_ci.sh format
 
