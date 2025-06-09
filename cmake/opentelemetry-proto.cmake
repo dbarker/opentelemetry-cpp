@@ -44,17 +44,27 @@ elseif(EXISTS "${PROJECT_SOURCE_DIR}/third_party/opentelemetry-proto/.git")
 endif()
 
 otel_add_thirdparty_package(
-  PACKAGE_NAME "opentelemetry-proto" 
+  PACKAGE_NAME "opentelemetry-proto"
   FETCH_GIT_REPOSITORY "https://github.com/open-telemetry/opentelemetry-proto.git"
   FETCH_GIT_TAG "${opentelemetry-proto_GIT_TAG}"
   FETCH_SOURCE_DIR "${PROTO_PATH}"
   ALWAYS_FETCH
   )
 
+# If fetching from github then we need to set the proto path to the source directory
+# Get the path from the property set by otel_add_thirdparty_package
 if(NOT DEFINED PROTO_PATH)
-  set(PROTO_PATH ${opentelemetry-proto_SOURCE_DIR})
+  get_property(
+    PROTO_PATH
+    DIRECTORY ${PROJECT_SOURCE_DIR}
+    PROPERTY OTEL_opentelemetry-proto_SOURCE_DIR)
 endif()
 
+if(NOT DEFINED PROTO_PATH)
+  message(FATAL_ERROR "opentelemetry-proto source directory not found")
+endif()
+
+# opentelemetry-proto's version will be found from the actual git tag used.
 find_package(Git QUIET)
 if(Git_FOUND)
   execute_process(

@@ -7,14 +7,14 @@ set(protobuf_ADD_PACKAGE_ARGS "")
 
 if(DEFINED _gRPC_PROVIDER AND NOT _gRPC_PROVIDER STREQUAL "package" AND TARGET libprotobuf)
   # gRPC was fetched and built protobuf as a submodule
-  list(APPEND protobuf_ADD_PACKAGE_ARGS  
+  list(APPEND protobuf_ADD_PACKAGE_ARGS
       VERSION_FILE "\${grpc_SOURCE_DIR}/third_party/protobuf/version.json"
       DO_NOT_FETCH
       DO_NOT_FIND
   )
   set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY OTEL_Protobuf_PROVIDER "grpc_submodule")
 else()
-  list(APPEND protobuf_ADD_PACKAGE_ARGS  
+  list(APPEND protobuf_ADD_PACKAGE_ARGS
       VERSION_FILE "\${protobuf_SOURCE_DIR}/version.json")
 endif()
 
