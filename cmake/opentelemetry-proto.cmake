@@ -37,26 +37,19 @@ if(OTELCPP_PROTO_PATH)
   endif()
   set(PROTO_PATH ${OTELCPP_PROTO_PATH})
   message(STATUS "opentelemetry-proto dependency satisfied by OTELCPP_PROTO_PATH: ${PROTO_PATH}")
-elseif(EXISTS ${PROJECT_SOURCE_DIR}/third_party/opentelemetry-proto/.git)
+elseif(EXISTS "${PROJECT_SOURCE_DIR}/third_party/opentelemetry-proto/.git")
     set(PROTO_PATH
         "${PROJECT_SOURCE_DIR}/third_party/opentelemetry-proto")
     message(STATUS "opentelemetry-proto dependency satisfied by git submodule: ${PROTO_PATH}")
 endif()
 
-if(DEFINED PROTO_PATH)
- FetchContent_Declare(
-    opentelemetry-proto
-    SOURCE_DIR "${PROTO_PATH}"
+otel_add_thirdparty_package(
+  PACKAGE_NAME "opentelemetry-proto" 
+  FETCH_GIT_REPOSITORY "https://github.com/open-telemetry/opentelemetry-proto.git"
+  FETCH_GIT_TAG "${opentelemetry-proto_GIT_TAG}"
+  FETCH_SOURCE_DIR "${PROTO_PATH}"
+  ALWAYS_FETCH
   )
-else()
-  FetchContent_Declare(
-    opentelemetry-proto
-    GIT_REPOSITORY "https://github.com/open-telemetry/opentelemetry-proto.git"
-    GIT_TAG "${opentelemetry-proto_GIT_TAG}"
-  )
-endif()
-
-FetchContent_MakeAvailable(opentelemetry-proto)
 
 if(NOT DEFINED PROTO_PATH)
   set(PROTO_PATH ${opentelemetry-proto_SOURCE_DIR})
@@ -66,13 +59,15 @@ find_package(Git QUIET)
 if(Git_FOUND)
   execute_process(
     COMMAND ${GIT_EXECUTABLE} describe --tags HEAD
-    WORKING_DIRECTORY ${opentelemetry-proto_SOURCE_DIR}
-    OUTPUT_VARIABLE opentelemetry-proto_TAG_FOUND
+    WORKING_DIRECTORY "${PROTO_PATH}"
+    OUTPUT_VARIABLE "opentelemetry-proto_TAG_FOUND"
     OUTPUT_STRIP_TRAILING_WHITESPACE)
+  message(STATUS "opentelemetry-proto_TAG_FOUND=${opentelemetry-proto_TAG_FOUND}")
   string(REGEX REPLACE "^v" "" opentelemetry-proto_VERSION "${opentelemetry-proto_TAG_FOUND}")
+  set_property(
+    DIRECTORY ${PROJECT_SOURCE_DIR}
+    PROPERTY OTEL_opentelemetry-proto_VERSION "${opentelemetry-proto_VERSION}")
 endif()
-
-otel_add_thirdparty_package(PACKAGE_NAME "opentelemetry-proto")
 
 set(COMMON_PROTO "${PROTO_PATH}/opentelemetry/proto/common/v1/common.proto")
 set(RESOURCE_PROTO
