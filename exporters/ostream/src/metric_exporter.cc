@@ -87,6 +87,93 @@ static inline void printVec(std::ostream &os, Container &vec)
   os << ']';
 }
 
+struct ValueTypePrinter
+{
+  std::ostream &sout;
+  void operator()(int64_t v) const noexcept { sout << v; }
+  void operator()(double v) const noexcept { sout << v; }
+};
+
+struct PointDataPrinter
+{
+  std::ostream &sout;
+
+  bool operator()(const sdk::metrics::SumPointData &d) const noexcept
+  {
+    sout << "\n  type\t\t: SumPointData";
+    sout << "\n  value\t\t: ";
+    nostd::visit(ValueTypePrinter{sout}, d.value_);
+    return true;
+  }
+
+  bool operator()(const sdk::metrics::HistogramPointData &d) const noexcept
+  {
+    sout << "\n  type     : HistogramPointData";
+    sout << "\n  count     : " << d.count_;
+    sout << "\n  sum     : ";
+    nostd::visit(ValueTypePrinter{sout}, d.sum_);
+    if (d.record_min_max_)
+    {
+      sout << "\n  min     : ";
+      nostd::visit(ValueTypePrinter{sout}, d.min_);
+      sout << "\n  max     : ";
+      nostd::visit(ValueTypePrinter{sout}, d.max_);
+    }
+    sout << "\n  buckets     : ";
+    printVec(sout, d.boundaries_);
+    sout << "\n  counts     : ";
+    printVec(sout, d.counts_);
+    return true;
+  }
+
+  bool operator()(const sdk::metrics::LastValuePointData &d) const noexcept
+  {
+    sout << "\n  type     : LastValuePointData";
+    sout << "\n  timestamp     : " << std::to_string(d.sample_ts_.time_since_epoch().count())
+         << std::boolalpha << "\n  valid     : " << d.is_lastvalue_valid_;
+    sout << "\n  value     : ";
+    nostd::visit(ValueTypePrinter{sout}, d.value_);
+    return true;
+  }
+
+  bool operator()(const sdk::metrics::Base2ExponentialHistogramPointData &d) const noexcept
+  {
+    if (!d.positive_buckets_ && !d.negative_buckets_)
+    {
+      return false;
+    }
+    sout << "\n  type: Base2ExponentialHistogramPointData";
+    sout << "\n  count: " << d.count_;
+    sout << "\n  sum: " << d.sum_;
+    sout << "\n  zero_count: " << d.zero_count_;
+    if (d.record_min_max_)
+    {
+      sout << "\n  min: " << d.min_;
+      sout << "\n  max: " << d.max_;
+    }
+    sout << "\n  scale: " << d.scale_;
+    sout << "\n  positive buckets:";
+    if (!d.positive_buckets_->Empty())
+    {
+      for (auto i = d.positive_buckets_->StartIndex(); i <= d.positive_buckets_->EndIndex(); ++i)
+      {
+        sout << "\n\t" << i << ": " << d.positive_buckets_->Get(i);
+      }
+    }
+    sout << "\n  negative buckets:";
+    if (!d.negative_buckets_->Empty())
+    {
+      for (auto i = d.negative_buckets_->StartIndex(); i <= d.negative_buckets_->EndIndex(); ++i)
+      {
+        sout << "\n\t" << i << ": " << d.negative_buckets_->Get(i);
+      }
+    }
+    return true;
+  }
+
+  bool operator()(const sdk::metrics::DropPointData &) const noexcept { return false; }
+};
+
 OStreamMetricExporter::OStreamMetricExporter(
     std::ostream &sout,
     sdk::metrics::AggregationTemporality aggregation_temporality) noexcept
@@ -119,7 +206,7 @@ sdk::common::ExportResult OStreamMetricExporter::Export(
 
 void OStreamMetricExporter::printAttributes(
     const std::map<std::string, sdk::common::OwnedAttributeValue> &map,
-    const std::string &prefix)
+    const std::string &prefix) noexcept
 {
   for (const auto &kv : map)
   {
@@ -128,7 +215,8 @@ void OStreamMetricExporter::printAttributes(
   }
 }
 
-void OStreamMetricExporter::printResources(const opentelemetry::sdk::resource::Resource &resources)
+void OStreamMetricExporter::printResources(
+    const opentelemetry::sdk::resource::Resource &resources) noexcept
 {
   auto attributes = resources.GetAttributes();
   if (attributes.size())
@@ -144,7 +232,7 @@ void OStreamMetricExporter::printResources(const opentelemetry::sdk::resource::R
 
 void OStreamMetricExporter::printInstrumentationInfoMetricData(
     const sdk::metrics::ScopeMetrics &info_metric,
-    const sdk::metrics::ResourceMetrics &data)
+    const sdk::metrics::ResourceMetrics &data) noexcept
 {
   // sout_ is shared
   const std::lock_guard<std::mutex> serialize(serialize_lock_);
@@ -162,11 +250,7 @@ void OStreamMetricExporter::printInstrumentationInfoMetricData(
 
     for (const auto &pd : record.point_data_attr_)
     {
-      if (!nostd::holds_alternative<sdk::metrics::DropPointData>(pd.point_data))
-      {
-        printPointData(pd.point_data);
-        printPointAttributes(pd.attributes);
-      }
+      printPointDataAttributes(pd);
     }
 
     sout_ << "\n  resources\t:";
@@ -175,124 +259,16 @@ void OStreamMetricExporter::printInstrumentationInfoMetricData(
   sout_ << "\n}\n";
 }
 
-void OStreamMetricExporter::printPointData(const opentelemetry::sdk::metrics::PointType &point_data)
+void OStreamMetricExporter::printPointDataAttributes(
+    const opentelemetry::sdk::metrics::PointDataAttributes &point_data_attributes) noexcept
 {
-  if (nostd::holds_alternative<sdk::metrics::SumPointData>(point_data))
+  if (!nostd::visit(PointDataPrinter{sout_}, point_data_attributes.point_data))
   {
-    auto sum_point_data = nostd::get<sdk::metrics::SumPointData>(point_data);
-    sout_ << "\n  type\t\t: SumPointData";
-    sout_ << "\n  value\t\t: ";
-    if (nostd::holds_alternative<double>(sum_point_data.value_))
-    {
-      sout_ << nostd::get<double>(sum_point_data.value_);
-    }
-    else if (nostd::holds_alternative<int64_t>(sum_point_data.value_))
-    {
-      sout_ << nostd::get<int64_t>(sum_point_data.value_);
-    }
+    return;
   }
-  else if (nostd::holds_alternative<sdk::metrics::HistogramPointData>(point_data))
-  {
-    auto histogram_point_data = nostd::get<sdk::metrics::HistogramPointData>(point_data);
-    sout_ << "\n  type     : HistogramPointData";
-    sout_ << "\n  count     : " << histogram_point_data.count_;
-    sout_ << "\n  sum     : ";
-    if (nostd::holds_alternative<double>(histogram_point_data.sum_))
-    {
-      sout_ << nostd::get<double>(histogram_point_data.sum_);
-    }
-    else if (nostd::holds_alternative<int64_t>(histogram_point_data.sum_))
-    {
-      sout_ << nostd::get<int64_t>(histogram_point_data.sum_);
-    }
 
-    if (histogram_point_data.record_min_max_)
-    {
-      if (nostd::holds_alternative<int64_t>(histogram_point_data.min_))
-      {
-        sout_ << "\n  min     : " << nostd::get<int64_t>(histogram_point_data.min_);
-      }
-      else if (nostd::holds_alternative<double>(histogram_point_data.min_))
-      {
-        sout_ << "\n  min     : " << nostd::get<double>(histogram_point_data.min_);
-      }
-      if (nostd::holds_alternative<int64_t>(histogram_point_data.max_))
-      {
-        sout_ << "\n  max     : " << nostd::get<int64_t>(histogram_point_data.max_);
-      }
-      if (nostd::holds_alternative<double>(histogram_point_data.max_))
-      {
-        sout_ << "\n  max     : " << nostd::get<double>(histogram_point_data.max_);
-      }
-    }
-
-    sout_ << "\n  buckets     : ";
-    printVec(sout_, histogram_point_data.boundaries_);
-
-    sout_ << "\n  counts     : ";
-    printVec(sout_, histogram_point_data.counts_);
-  }
-  else if (nostd::holds_alternative<sdk::metrics::LastValuePointData>(point_data))
-  {
-    auto last_point_data = nostd::get<sdk::metrics::LastValuePointData>(point_data);
-    sout_ << "\n  type     : LastValuePointData";
-    sout_ << "\n  timestamp     : "
-          << std::to_string(last_point_data.sample_ts_.time_since_epoch().count()) << std::boolalpha
-          << "\n  valid     : " << last_point_data.is_lastvalue_valid_;
-    sout_ << "\n  value     : ";
-    if (nostd::holds_alternative<double>(last_point_data.value_))
-    {
-      sout_ << nostd::get<double>(last_point_data.value_);
-    }
-    else if (nostd::holds_alternative<int64_t>(last_point_data.value_))
-    {
-      sout_ << nostd::get<int64_t>(last_point_data.value_);
-    }
-  }
-  else if (nostd::holds_alternative<sdk::metrics::Base2ExponentialHistogramPointData>(point_data))
-  {
-    auto histogram_point_data =
-        nostd::get<sdk::metrics::Base2ExponentialHistogramPointData>(point_data);
-    if (!histogram_point_data.positive_buckets_ && !histogram_point_data.negative_buckets_)
-    {
-      return;
-    }
-    sout_ << "\n  type: Base2ExponentialHistogramPointData";
-    sout_ << "\n  count: " << histogram_point_data.count_;
-    sout_ << "\n  sum: " << histogram_point_data.sum_;
-    sout_ << "\n  zero_count: " << histogram_point_data.zero_count_;
-    if (histogram_point_data.record_min_max_)
-    {
-      sout_ << "\n  min: " << histogram_point_data.min_;
-      sout_ << "\n  max: " << histogram_point_data.max_;
-    }
-    sout_ << "\n  scale: " << histogram_point_data.scale_;
-    sout_ << "\n  positive buckets:";
-    if (!histogram_point_data.positive_buckets_->Empty())
-    {
-      for (auto i = histogram_point_data.positive_buckets_->StartIndex();
-           i <= histogram_point_data.positive_buckets_->EndIndex(); ++i)
-      {
-        sout_ << "\n\t" << i << ": " << histogram_point_data.positive_buckets_->Get(i);
-      }
-    }
-    sout_ << "\n  negative buckets:";
-    if (!histogram_point_data.negative_buckets_->Empty())
-    {
-      for (auto i = histogram_point_data.negative_buckets_->StartIndex();
-           i <= histogram_point_data.negative_buckets_->EndIndex(); ++i)
-      {
-        sout_ << "\n\t" << i << ": " << histogram_point_data.negative_buckets_->Get(i);
-      }
-    }
-  }
-}
-
-void OStreamMetricExporter::printPointAttributes(
-    const opentelemetry::sdk::metrics::PointAttributes &point_attributes)
-{
   sout_ << "\n  attributes\t\t: ";
-  for (const auto &kv : point_attributes)
+  for (const auto &kv : point_data_attributes.attributes)
   {
     sout_ << "\n\t" << kv.first << ": ";
     opentelemetry::exporter::ostream_common::print_value(kv.second, sout_);

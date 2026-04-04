@@ -75,12 +75,12 @@ private:
   sdk::metrics::AggregationTemporality aggregation_temporality_;
   bool isShutdown() const noexcept;
   void printInstrumentationInfoMetricData(const sdk::metrics::ScopeMetrics &info_metrics,
-                                          const sdk::metrics::ResourceMetrics &data);
-  void printPointData(const opentelemetry::sdk::metrics::PointType &point_data);
-  void printPointAttributes(const opentelemetry::sdk::metrics::PointAttributes &point_attributes);
+                                          const sdk::metrics::ResourceMetrics &data) noexcept;
+  void printPointDataAttributes(
+      const opentelemetry::sdk::metrics::PointDataAttributes &point_data_attributes) noexcept;
   void printAttributes(const std::map<std::string, sdk::common::OwnedAttributeValue> &map,
-                       const std::string &prefix);
-  void printResources(const opentelemetry::sdk::resource::Resource &resources);
+                       const std::string &prefix) noexcept;
+  void printResources(const opentelemetry::sdk::resource::Resource &resources) noexcept;
 };
 }  // namespace metrics
 }  // namespace exporter
