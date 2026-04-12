@@ -80,10 +80,28 @@ public:
     return ContextValue{};
   }
 
+  // Returns a pointer to the value associated with the passed in key, or nullptr if the key is not
+  // found
+  const context::ContextValue *GetValuePtr(const nostd::string_view key) const noexcept
+  {
+    for (DataList *data = head_.get(); data != nullptr; data = data->next_.get())
+    {
+      if (key.size() == data->key_length_)
+      {
+        if (std::memcmp(key.data(), data->key_, data->key_length_) == 0)
+        {
+          return &data->value_;
+        }
+      }
+    }
+    return nullptr;
+  }
+
   // Checks for key and returns true if found
   bool HasKey(const nostd::string_view key) const noexcept
   {
-    return !nostd::holds_alternative<nostd::monostate>(GetValue(key));
+    const context::ContextValue *value = GetValuePtr(key);
+    return value != nullptr && !nostd::holds_alternative<nostd::monostate>(*value);
   }
 
   bool operator==(const Context &other) const noexcept { return (head_ == other.head_); }

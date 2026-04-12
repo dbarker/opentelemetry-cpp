@@ -48,10 +48,10 @@ class SyncMetricStorage : public MetricStorage, public SyncWritableMetricStorage
   static inline bool EnableExamplarFilter(ExemplarFilterType filter_type,
                                           const opentelemetry::context::Context &context)
   {
+    const opentelemetry::trace::SpanContext span_context = trace::GetSpanContext(context);
     return filter_type == ExemplarFilterType::kAlwaysOn ||
-           (filter_type == ExemplarFilterType::kTraceBased &&
-            opentelemetry::trace::GetSpan(context)->GetContext().IsValid() &&
-            opentelemetry::trace::GetSpan(context)->GetContext().IsSampled());
+           (filter_type == ExemplarFilterType::kTraceBased && span_context.IsValid() &&
+            span_context.IsSampled());
   }
 
 #endif  // ENABLE_METRICS_EXEMPLAR_PREVIEW

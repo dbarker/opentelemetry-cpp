@@ -50,6 +50,7 @@
 #include "opentelemetry/trace/span_id.h"
 #include "opentelemetry/trace/span_metadata.h"
 #include "opentelemetry/trace/span_startoptions.h"
+#include "opentelemetry/trace/trace_flags.h"
 #include "opentelemetry/trace/trace_id.h"
 #include "opentelemetry/trace/trace_state.h"
 #include "opentelemetry/trace/tracer.h"
@@ -544,14 +545,9 @@ TEST(Tracer, StartSpanWithDisabledConfig)
   auto tracer = initTracer(std::unique_ptr<SpanExporter>{exporter}, new AlwaysOnSampler(),
                            new RandomIdGenerator(), disable_tracer);
   auto span   = tracer->StartSpan("span 1");
-
-  std::shared_ptr<opentelemetry::trace::Tracer> noop_tracer =
-      std::make_shared<opentelemetry::trace::NoopTracer>();
-  auto noop_span = noop_tracer->StartSpan("noop");
-  EXPECT_TRUE(span.get() == noop_span.get());
+  EXPECT_FALSE(span->IsRecording());
 
 #if OPENTELEMETRY_ABI_VERSION_NO >= 2
-  EXPECT_FALSE(noop_tracer->Enabled());
   EXPECT_FALSE(tracer->Enabled());
 #endif
 }
@@ -565,23 +561,15 @@ TEST(Tracer, StartSpanWithEnabledConfig)
   auto tracer = initTracer(std::unique_ptr<SpanExporter>{exporter}, new AlwaysOnSampler(),
                            new RandomIdGenerator(), enable_tracer);
   auto span   = tracer->StartSpan("span 1");
-
-  std::shared_ptr<opentelemetry::trace::Tracer> noop_tracer =
-      std::make_shared<opentelemetry::trace::NoopTracer>();
-  auto noop_span = noop_tracer->StartSpan("noop");
-  EXPECT_FALSE(span.get() == noop_span.get());
+  EXPECT_TRUE(span->IsRecording());
 
 #if OPENTELEMETRY_ABI_VERSION_NO >= 2
-  EXPECT_FALSE(noop_tracer->Enabled());
   EXPECT_TRUE(tracer->Enabled());
 #endif
 }
 
 TEST(Tracer, StartSpanWithCustomConfig)
 {
-  std::shared_ptr<opentelemetry::trace::Tracer> noop_tracer =
-      std::make_shared<opentelemetry::trace::NoopTracer>();
-  auto noop_span                = noop_tracer->StartSpan("noop");
   auto check_if_version_present = [](const InstrumentationScope &scope_info) {
     return !scope_info.GetVersion().empty();
   };
@@ -596,31 +584,30 @@ TEST(Tracer, StartSpanWithCustomConfig)
       initTracer(std::unique_ptr<SpanExporter>{new InMemorySpanExporter()}, new AlwaysOnSampler(),
                  new RandomIdGenerator(), custom_configurator);
   const auto span_default_scope = tracer_default_scope->StartSpan("span 1");
-  EXPECT_TRUE(span_default_scope == noop_span);
+  EXPECT_FALSE(span_default_scope->IsRecording());
 
   auto foo_scope = InstrumentationScope::Create("foo_library");
   const auto tracer_foo_scope =
       initTracer(std::unique_ptr<SpanExporter>{new InMemorySpanExporter()}, new AlwaysOnSampler(),
                  new RandomIdGenerator(), custom_configurator, std::move(foo_scope));
   const auto span_foo_scope = tracer_foo_scope->StartSpan("span 1");
-  EXPECT_TRUE(span_foo_scope == noop_span);
+  EXPECT_FALSE(span_foo_scope->IsRecording());
 
   auto foo_scope_with_version = InstrumentationScope::Create("foo_library", "1.0.0");
   const auto tracer_foo_scope_with_version =
       initTracer(std::unique_ptr<SpanExporter>{new InMemorySpanExporter()}, new AlwaysOnSampler(),
                  new RandomIdGenerator(), custom_configurator, std::move(foo_scope_with_version));
   const auto span_foo_scope_with_version = tracer_foo_scope_with_version->StartSpan("span 1");
-  EXPECT_FALSE(span_foo_scope_with_version == noop_span);
+  EXPECT_TRUE(span_foo_scope_with_version->IsRecording());
 
   auto bar_scope = InstrumentationScope::Create("bar_library");
   auto tracer_bar_scope =
       initTracer(std::unique_ptr<SpanExporter>{new InMemorySpanExporter()}, new AlwaysOnSampler(),
                  new RandomIdGenerator(), custom_configurator, std::move(bar_scope));
   auto span_bar_scope = tracer_bar_scope->StartSpan("span 1");
-  EXPECT_FALSE(span_bar_scope == noop_span);
+  EXPECT_TRUE(span_bar_scope->IsRecording());
 
 #if OPENTELEMETRY_ABI_VERSION_NO >= 2
-  EXPECT_FALSE(noop_tracer->Enabled());
   EXPECT_FALSE(tracer_default_scope->Enabled());
   EXPECT_FALSE(tracer_foo_scope->Enabled());
   EXPECT_TRUE(tracer_foo_scope_with_version->Enabled());
@@ -630,9 +617,6 @@ TEST(Tracer, StartSpanWithCustomConfig)
 
 TEST(Tracer, StartSpanWithCustomConfigDifferingConditionOrder)
 {
-  std::shared_ptr<opentelemetry::trace::Tracer> noop_tracer =
-      std::make_shared<opentelemetry::trace::NoopTracer>();
-  auto noop_span                = noop_tracer->StartSpan("noop");
   auto check_if_version_present = [](const InstrumentationScope &scope_info) {
     return !scope_info.GetVersion().empty();
   };
@@ -661,12 +645,12 @@ TEST(Tracer, StartSpanWithCustomConfigDifferingConditionOrder)
 
   // Custom configurator 1 evaluates version first and enables the tracer
   const auto span_foo_scope_with_version_1 = tracer_foo_scope_with_version_1->StartSpan("span 1");
-  EXPECT_FALSE(span_foo_scope_with_version_1 == noop_span);
+  EXPECT_TRUE(span_foo_scope_with_version_1->IsRecording());
 
   // Custom configurator 2 evaluates the name first and therefore disables the tracer without
   // evaluating other condition
   const auto span_foo_scope_with_version_2 = tracer_foo_scope_with_version_2->StartSpan("span 1");
-  EXPECT_TRUE(span_foo_scope_with_version_2 == noop_span);
+  EXPECT_FALSE(span_foo_scope_with_version_2->IsRecording());
 
 #if OPENTELEMETRY_ABI_VERSION_NO >= 2
   EXPECT_TRUE(tracer_foo_scope_with_version_1->Enabled());
@@ -1437,4 +1421,141 @@ TEST(Tracer, SpanSamplerDecision)
     }
   }
   EXPECT_EQ(3, span_data->GetSpans().size());
+}
+
+// A sampler that returns a specific tracestate from ShouldSample.
+class TraceStateSampler final : public Sampler
+{
+public:
+  explicit TraceStateSampler(nostd::shared_ptr<trace_api::TraceState> ts)
+      : trace_state_(std::move(ts))
+  {}
+
+  SamplingResult ShouldSample(
+      const SpanContext & /*parent_context*/,
+      trace_api::TraceId /*trace_id*/,
+      nostd::string_view /*name*/,
+      trace_api::SpanKind /*span_kind*/,
+      const opentelemetry::common::KeyValueIterable & /*attributes*/,
+      const opentelemetry::trace::SpanContextKeyValueIterable & /*links*/) noexcept override
+  {
+    return {Decision::RECORD_AND_SAMPLE, nullptr, trace_state_};
+  }
+
+  nostd::string_view GetDescription() const noexcept override { return "TraceStateSampler"; }
+
+private:
+  nostd::shared_ptr<trace_api::TraceState> trace_state_;
+};
+
+TEST(Tracer, SpanContextInheritsParentTraceId)
+{
+  InMemorySpanExporter *exporter              = new InMemorySpanExporter();
+  std::shared_ptr<InMemorySpanData> span_data = exporter->GetData();
+  auto tracer = initTracer(std::unique_ptr<SpanExporter>{exporter}, new AlwaysOnSampler());
+
+  auto parent = tracer->StartSpan("parent");
+
+  trace_api::StartSpanOptions options;
+  options.parent = parent->GetContext();
+  auto child     = tracer->StartSpan("child", options);
+
+  // Child must inherit the parent's trace id.
+  EXPECT_EQ(child->GetContext().trace_id(), parent->GetContext().trace_id());
+  // Child must have a distinct span id.
+  EXPECT_NE(child->GetContext().span_id(), parent->GetContext().span_id());
+  // Both must be sampled (AlwaysOnSampler → RECORD_AND_SAMPLE).
+  EXPECT_TRUE(parent->GetContext().IsSampled());
+  EXPECT_TRUE(child->GetContext().IsSampled());
+
+  child->End();
+  parent->End();
+}
+
+TEST(Tracer, SpanContextSampledFlagFromSamplerDecision)
+{
+  // RECORD_AND_SAMPLE → sampled, RECORD_ONLY → not sampled, DROP → not sampled.
+  InMemorySpanExporter *exporter              = new InMemorySpanExporter();
+  std::shared_ptr<InMemorySpanData> span_data = exporter->GetData();
+  auto tracer = initTracer(std::unique_ptr<SpanExporter>{exporter}, new MockDecisionSampler());
+
+  auto sampled_span     = tracer->StartSpan("sampled");
+  auto record_only_span = tracer->StartSpan("RECORD_ONLY-span");
+  auto dropped_span     = tracer->StartSpan("DROP-span");
+
+  EXPECT_TRUE(sampled_span->GetContext().IsSampled());
+  EXPECT_FALSE(record_only_span->GetContext().IsSampled());
+  EXPECT_FALSE(dropped_span->GetContext().IsSampled());
+
+  // All contexts must be valid (spec: generate span id independently of sampling decision).
+  EXPECT_TRUE(sampled_span->GetContext().IsValid());
+  EXPECT_TRUE(record_only_span->GetContext().IsValid());
+  EXPECT_TRUE(dropped_span->GetContext().IsValid());
+
+  sampled_span->End();
+  record_only_span->End();
+}
+
+TEST(Tracer, SpanContextUsesTraceStateFromSampler)
+{
+  auto sampler_ts = trace_api::TraceState::FromHeader("vendor1=value1");
+
+  InMemorySpanExporter *exporter              = new InMemorySpanExporter();
+  std::shared_ptr<InMemorySpanData> span_data = exporter->GetData();
+  auto tracer =
+      initTracer(std::unique_ptr<SpanExporter>{exporter}, new TraceStateSampler(sampler_ts));
+
+  auto span = tracer->StartSpan("span");
+
+  // Span must use the tracestate returned by the sampler.
+  std::string ts_value;
+  EXPECT_TRUE(span->GetContext().trace_state()->Get("vendor1", ts_value));
+  EXPECT_EQ("value1", ts_value);
+
+  span->End();
+}
+
+TEST(Tracer, SpanContextFallsBackToParentTraceState)
+{
+  // When the sampler returns nullptr tracestate, the span should inherit the parent's tracestate.
+  auto parent_ts = trace_api::TraceState::FromHeader("parentvendor=parentval");
+
+  InMemorySpanExporter *exporter              = new InMemorySpanExporter();
+  std::shared_ptr<InMemorySpanData> span_data = exporter->GetData();
+  // MockDecisionSampler returns nullptr tracestate for RECORD_AND_SAMPLE.
+  auto tracer = initTracer(std::unique_ptr<SpanExporter>{exporter}, new MockDecisionSampler());
+
+  // Construct a remote parent SpanContext with a specific tracestate.
+  uint8_t trace_id_buf[16] = {1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1};
+  uint8_t span_id_buf[8]   = {1, 2, 3, 4, 5, 6, 7, 8};
+
+  SpanContext parent_ctx(trace_api::TraceId(trace_id_buf), trace_api::SpanId(span_id_buf),
+                         trace_api::TraceFlags(trace_api::TraceFlags::kIsSampled), true, parent_ts);
+
+  trace_api::StartSpanOptions options;
+  options.parent = parent_ctx;
+  auto span      = tracer->StartSpan("child", options);
+
+  // With nullptr from sampler, should fall back to parent tracestate.
+  std::string ts_value;
+  EXPECT_TRUE(span->GetContext().trace_state()->Get("parentvendor", ts_value));
+  EXPECT_EQ("parentval", ts_value);
+
+  span->End();
+}
+
+TEST(Tracer, SpanContextUsesDefaultTraceStateWhenNoParent)
+{
+  // When there's no parent and sampler returns nullptr tracestate, should get default (empty).
+  InMemorySpanExporter *exporter              = new InMemorySpanExporter();
+  std::shared_ptr<InMemorySpanData> span_data = exporter->GetData();
+  // MockDecisionSampler returns nullptr tracestate.
+  auto tracer = initTracer(std::unique_ptr<SpanExporter>{exporter}, new MockDecisionSampler());
+
+  auto span = tracer->StartSpan("root");
+
+  // Default tracestate should be empty.
+  EXPECT_TRUE(span->GetContext().trace_state()->Empty());
+
+  span->End();
 }
