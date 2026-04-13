@@ -5,18 +5,6 @@
 
 set -eo pipefail
 
-function install_prometheus_cpp_client
-{
-  pushd third_party/prometheus-cpp
-  git submodule update --recursive --init
-  [[ -d _build ]] && rm -rf ./_build
-  mkdir _build && cd _build
-  cmake .. -DBUILD_SHARED_LIBS=ON -DUSE_THIRDPARTY_LIBRARIES=ON
-  make -j $(nproc)
-  sudo make install
-  popd
-}
-
 function run_benchmarks
 {
   docker run -d --rm -it -p 4317:4317 -p 4318:4318 -v \
@@ -67,8 +55,6 @@ mkdir -p "${INSTALL_TEST_DIR}"
 
 MAKE_COMMAND="make -k -j \$(nproc)"
 
-echo "make command: ${MAKE_COMMAND}"
-
 export BAZEL_CXXOPTS="-std=c++17"
 
 # Work around for https://github.com/actions/runner-images/issues/13564
@@ -114,8 +100,6 @@ else
   OTELCPP_CMAKE_CACHE_FILE_PATH="${SRC_DIR}/test_common/cmake/all-options-abiv1-preview.cmake"
 fi
 
-echo "CMAKE_OPTIONS:" "${CMAKE_OPTIONS[@]}"
-
 export CTEST_OUTPUT_ON_FAILURE=1
 
 if [[ "$1" == "cmake.test" ]]; then
@@ -154,19 +138,6 @@ elif [[ "$1" == "cmake.maintainer.async.test" ]]; then
         -DWITH_NO_DEPRECATED_CODE=ON \
         "${SRC_DIR}"
   eval "$MAKE_COMMAND"
-  make test
-  exit 0
-elif [[ "$1" == "cmake.maintainer.cpp11.async.test" ]]; then
-  cd "${BUILD_DIR}"
-  rm -rf *
-  cmake "${CMAKE_OPTIONS[@]}"  \
-        -DCMAKE_CXX_STANDARD=11 \
-        -C ${SRC_DIR}/test_common/cmake/all-options-abiv1-preview.cmake \
-        -DWITH_OPENTRACING=OFF \
-        -DOTELCPP_MAINTAINER_MODE=ON \
-        -DWITH_NO_DEPRECATED_CODE=ON \
-        "${SRC_DIR}"
-  make -k -j $(nproc)
   make test
   exit 0
 elif [[ "$1" == "cmake.maintainer.abiv2.test" ]]; then
@@ -265,13 +236,38 @@ elif [[ "$1" == "cmake.opentracing_shim.install.test" ]]; then
         -S "${SRC_DIR}/install/test/cmake"
   ctest --output-on-failure
   exit 0
+ elif [[ "$1" == "cmake.c++14.test" ]]; then
+  cd "${BUILD_DIR}"
+  rm -rf *
+  cmake "${CMAKE_OPTIONS[@]}"  \
+        -DCMAKE_CXX_STANDARD=14 \
+        -DOTELCPP_MAINTAINER_MODE=ON \
+        -DWITH_ASYNC_EXPORT_PREVIEW=ON \
+        -DWITH_STL=OFF \
+        "${SRC_DIR}"
+  eval "$MAKE_COMMAND"
+  make test
+  exit 0
+elif [[ "$1" == "cmake.c++17.test" ]]; then
+  cd "${BUILD_DIR}"
+  rm -rf *
+  cmake "${CMAKE_OPTIONS[@]}"  \
+        -DCMAKE_CXX_STANDARD=17 \
+        -DOTELCPP_MAINTAINER_MODE=ON \
+        -DWITH_ASYNC_EXPORT_PREVIEW=ON \
+        -DWITH_STL=OFF \
+        "${SRC_DIR}"
+  eval "$MAKE_COMMAND"
+  make test
+  exit 0
 elif [[ "$1" == "cmake.c++20.test" ]]; then
   cd "${BUILD_DIR}"
   rm -rf *
   cmake "${CMAKE_OPTIONS[@]}"  \
-        -DCMAKE_CXX_FLAGS="-Werror $CXXFLAGS" \
+        -DCMAKE_CXX_STANDARD=20 \
+        -DOTELCPP_MAINTAINER_MODE=ON \
         -DWITH_ASYNC_EXPORT_PREVIEW=ON \
-        -DWITH_STL=CXX20 \
+        -DWITH_STL=OFF \
         "${SRC_DIR}"
   eval "$MAKE_COMMAND"
   make test
@@ -280,9 +276,10 @@ elif [[ "$1" == "cmake.c++23.test" ]]; then
   cd "${BUILD_DIR}"
   rm -rf *
   cmake "${CMAKE_OPTIONS[@]}"  \
-        -DCMAKE_CXX_FLAGS="-Werror $CXXFLAGS" \
+        -DCMAKE_CXX_STANDARD=23 \
+        -DOTELCPP_MAINTAINER_MODE=ON \
         -DWITH_ASYNC_EXPORT_PREVIEW=ON \
-        -DWITH_STL=CXX23 \
+        -DWITH_STL=OFF \
         "${SRC_DIR}"
   eval "$MAKE_COMMAND"
   make test
@@ -292,7 +289,8 @@ elif [[ "$1" == "cmake.c++14.stl.test" ]]; then
   rm -rf *
   cmake "${CMAKE_OPTIONS[@]}"  \
         -DWITH_METRICS_EXEMPLAR_PREVIEW=ON \
-        -DCMAKE_CXX_FLAGS="-Werror $CXXFLAGS" \
+        -DCMAKE_CXX_STANDARD=14 \
+        -DOTELCPP_MAINTAINER_MODE=ON \
         -DWITH_ASYNC_EXPORT_PREVIEW=ON \
         -DWITH_STL=CXX14 \
         "${SRC_DIR}"
@@ -304,7 +302,8 @@ elif [[ "$1" == "cmake.c++17.stl.test" ]]; then
   rm -rf *
   cmake "${CMAKE_OPTIONS[@]}"  \
         -DWITH_METRICS_EXEMPLAR_PREVIEW=ON \
-        -DCMAKE_CXX_FLAGS="-Werror $CXXFLAGS" \
+        -DCMAKE_CXX_STANDARD=17 \
+        -DOTELCPP_MAINTAINER_MODE=ON \
         -DWITH_ASYNC_EXPORT_PREVIEW=ON \
         -DWITH_STL=CXX17 \
         "${SRC_DIR}"
@@ -316,7 +315,8 @@ elif [[ "$1" == "cmake.c++20.stl.test" ]]; then
   rm -rf *
   cmake "${CMAKE_OPTIONS[@]}"  \
         -DWITH_METRICS_EXEMPLAR_PREVIEW=ON \
-        -DCMAKE_CXX_FLAGS="-Werror $CXXFLAGS" \
+        -DCMAKE_CXX_STANDARD=20 \
+        -DOTELCPP_MAINTAINER_MODE=ON \
         -DWITH_ASYNC_EXPORT_PREVIEW=ON \
         -DWITH_STL=CXX20 \
         "${SRC_DIR}"
@@ -328,22 +328,12 @@ elif [[ "$1" == "cmake.c++23.stl.test" ]]; then
   rm -rf *
   cmake "${CMAKE_OPTIONS[@]}"  \
         -DWITH_METRICS_EXEMPLAR_PREVIEW=ON \
-        -DCMAKE_CXX_FLAGS="-Werror $CXXFLAGS" \
+        -DCMAKE_CXX_STANDARD=23 \
+        -DOTELCPP_MAINTAINER_MODE=ON \
         -DWITH_ASYNC_EXPORT_PREVIEW=ON \
         -DWITH_STL=CXX23 \
         "${SRC_DIR}"
   eval "$MAKE_COMMAND"
-  make test
-  exit 0
-elif [[ "$1" == "cmake.legacy.test" ]]; then
-  cd "${BUILD_DIR}"
-  rm -rf *
-  export BUILD_ROOT="${BUILD_DIR}"
-  ${SRC_DIR}/tools/build-benchmark.sh
-  cmake "${CMAKE_OPTIONS[@]}"  \
-        -DCMAKE_CXX_FLAGS="-Werror $CXXFLAGS" \
-        "${SRC_DIR}"
-  make -j $(nproc)
   make test
   exit 0
 elif [[ "$1" == "cmake.clang_tidy.test" ]]; then
@@ -367,24 +357,6 @@ elif [[ "$1" == "cmake.clang_tidy.test" ]]; then
   echo "Build log written to: $LOG_FILE"
   echo "To generate a clang-tidy report, use the following command:"
   echo "  python3 ./ci/create_clang_tidy_report.py --build_log $LOG_FILE"
-  exit 0
-elif [[ "$1" == "cmake.legacy.exporter.otprotocol.test" ]]; then
-  cd "${BUILD_DIR}"
-  rm -rf *
-  export BUILD_ROOT="${BUILD_DIR}"
-  ${SRC_DIR}/tools/build-benchmark.sh
-  cmake "${CMAKE_OPTIONS[@]}"  \
-        -DCMAKE_CXX_STANDARD=11 \
-        -DWITH_OTLP_GRPC=ON \
-        -DWITH_OTLP_HTTP=ON \
-        -DWITH_OTLP_FILE=ON \
-        -DWITH_ASYNC_EXPORT_PREVIEW=ON \
-        "${SRC_DIR}"
-  grpc_cpp_plugin=`which grpc_cpp_plugin`
-  proto_make_file="CMakeFiles/opentelemetry_proto.dir/build.make"
-  sed -i "s~gRPC_CPP_PLUGIN_EXECUTABLE-NOTFOUND~$grpc_cpp_plugin~" ${proto_make_file} #fixme
-  make -j $(nproc)
-  cd exporters/otlp && make test
   exit 0
 elif [[ "$1" == "cmake.exporter.otprotocol.test" ]]; then
   cd "${BUILD_DIR}"
@@ -623,10 +595,6 @@ elif [[ "$1" == "bazel.valgrind" ]]; then
   bazel $BAZEL_STARTUP_OPTIONS build $BAZEL_OPTIONS_ASYNC //...
   bazel $BAZEL_STARTUP_OPTIONS test --test_timeout=600 --run_under="/usr/bin/valgrind --leak-check=full --error-exitcode=1 --errors-for-leak-kinds=definite --suppressions=\"${SRC_DIR}/ci/valgrind-suppressions\"" $BAZEL_TEST_OPTIONS_ASYNC //...
   exit 0
-elif [[ "$1" == "bazel.e2e" ]]; then
-  cd examples/e2e
-  bazel $BAZEL_STARTUP_OPTIONS build $BAZEL_OPTIONS_DEFAULT //...
-  exit 0
 elif [[ "$1" == "benchmark" ]]; then
   [ -z "${BENCHMARK_DIR}" ] && export BENCHMARK_DIR=$HOME/benchmark
   bazel $BAZEL_STARTUP_OPTIONS build $BAZEL_OPTIONS_ASYNC -c opt -- \
@@ -662,11 +630,6 @@ elif [[ "$1" == "code.coverage" ]]; then
   # removing test http server coverage from the total coverage. We don't use this server completely.
   lcov --remove coverage.info '*/ext/http/server/*'> tmp_coverage.info 2>/dev/null
   cp tmp_coverage.info coverage.info
-  exit 0
-elif [[ "$1" == "third_party.tags" ]]; then
-  echo "gRPC=v1.49.2" > third_party_release
-  echo "abseil=20240116.1" >> third_party_release
-  git submodule foreach --quiet 'echo "$name=$(git describe --tags HEAD)"' | sed 's:.*/::' >> third_party_release
   exit 0
 fi
 
