@@ -50,8 +50,8 @@ public:
         max_attributes_per_link_(max_attributes_per_link)
   {}
 
-  proto::trace::v1::Span &span() noexcept { return span_; }
-  const proto::trace::v1::Span &span() const noexcept { return span_; }
+  proto::trace::v1::Span &span() noexcept { return *span_; }
+  const proto::trace::v1::Span &span() const noexcept { return *span_; }
 
   /** Dynamically converts the resource of this span into a proto. */
   proto::resource::v1::Resource ProtoResource() const noexcept;
@@ -69,6 +69,9 @@ public:
 
   void SetAttribute(opentelemetry::nostd::string_view key,
                     const opentelemetry::common::AttributeValue &value) noexcept override;
+
+  void SetAttributes(
+      const opentelemetry::common::KeyValueIterable &attributes) noexcept override;
 
   void AddEvent(opentelemetry::nostd::string_view name,
                 opentelemetry::common::SystemTimestamp timestamp,
@@ -96,15 +99,16 @@ public:
                                    &instrumentation_scope) noexcept override;
 
 private:
-  proto::trace::v1::Span span_;
-  const opentelemetry::sdk::resource::Resource *resource_ = nullptr;
-  const opentelemetry::sdk::instrumentationscope::InstrumentationScope *instrumentation_scope_ =
-      nullptr;
   std::uint32_t max_attributes_;
   std::uint32_t max_events_;
   std::uint32_t max_links_;
   std::uint32_t max_attributes_per_event_;
   std::uint32_t max_attributes_per_link_;
+  google::protobuf::Arena arena_;
+  proto::trace::v1::Span *span_{google::protobuf::Arena::Create<proto::trace::v1::Span>(&arena_)};
+  const opentelemetry::sdk::resource::Resource *resource_ {nullptr};
+  const opentelemetry::sdk::instrumentationscope::InstrumentationScope *instrumentation_scope_{
+      nullptr};
 };
 }  // namespace otlp
 }  // namespace exporter

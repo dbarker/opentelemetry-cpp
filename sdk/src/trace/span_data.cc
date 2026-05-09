@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <chrono>
-#include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -31,24 +30,40 @@ namespace trace
 SpanDataEvent::SpanDataEvent(std::string name,
                              opentelemetry::common::SystemTimestamp timestamp,
                              const opentelemetry::common::KeyValueIterable &attributes)
-    : name_(std::move(name)), timestamp_(timestamp), attribute_map_(attributes)
-{}
+    : name_(std::move(name)), timestamp_(timestamp)
+{
+  attributes.ForEachKeyValue(
+      [this](opentelemetry::nostd::string_view key,
+             const opentelemetry::common::AttributeValue &value) noexcept {
+        attributes_[std::string(key)] =
+            opentelemetry::nostd::visit(opentelemetry::sdk::common::AttributeConverter(), value);
+        return true;
+      });
+}
 
 const std::unordered_map<std::string, opentelemetry::sdk::common::OwnedAttributeValue> &
 SpanDataEvent::GetAttributes() const noexcept
 {
-  return attribute_map_.GetAttributes();
+  return attributes_;
 }
 
 SpanDataLink::SpanDataLink(opentelemetry::trace::SpanContext span_context,
                            const opentelemetry::common::KeyValueIterable &attributes)
-    : span_context_(std::move(span_context)), attribute_map_(attributes)
-{}
+    : span_context_(std::move(span_context))
+{
+  attributes.ForEachKeyValue(
+      [this](opentelemetry::nostd::string_view key,
+             const opentelemetry::common::AttributeValue &value) noexcept {
+        attributes_[std::string(key)] =
+            opentelemetry::nostd::visit(opentelemetry::sdk::common::AttributeConverter(), value);
+        return true;
+      });
+}
 
 const std::unordered_map<std::string, opentelemetry::sdk::common::OwnedAttributeValue> &
 SpanDataLink::GetAttributes() const noexcept
 {
-  return attribute_map_.GetAttributes();
+  return attributes_;
 }
 
 const opentelemetry::sdk::resource::Resource &SpanData::GetResource() const noexcept
@@ -81,7 +96,7 @@ const opentelemetry::sdk::trace::InstrumentationScope &SpanData::GetInstrumentat
 const std::unordered_map<std::string, opentelemetry::sdk::common::OwnedAttributeValue> &
 SpanData::GetAttributes() const noexcept
 {
-  return attribute_map_.GetAttributes();
+  return attributes_;
 }
 
 void SpanData::SetIdentity(const opentelemetry::trace::SpanContext &span_context,
@@ -94,22 +109,34 @@ void SpanData::SetIdentity(const opentelemetry::trace::SpanContext &span_context
 void SpanData::SetAttribute(nostd::string_view key,
                             const opentelemetry::common::AttributeValue &value) noexcept
 {
-  attribute_map_.SetAttribute(key, value);
+  attributes_[std::string(key)] =
+      opentelemetry::nostd::visit(opentelemetry::sdk::common::AttributeConverter(), value);
+}
+
+void SpanData::SetAttributes(
+    const opentelemetry::common::KeyValueIterable &attributes) noexcept
+{
+  attributes_.reserve(attributes_.size() + attributes.size());
+  attributes.ForEachKeyValue(
+      [this](opentelemetry::nostd::string_view key,
+             const opentelemetry::common::AttributeValue &value) noexcept {
+        attributes_[std::string(key)] = opentelemetry::nostd::visit(
+            opentelemetry::sdk::common::AttributeConverter(), value);
+        return true;
+      });
 }
 
 void SpanData::AddEvent(nostd::string_view name,
                         opentelemetry::common::SystemTimestamp timestamp,
                         const opentelemetry::common::KeyValueIterable &attributes) noexcept
 {
-  SpanDataEvent event(std::string(name), timestamp, attributes);
-  events_.push_back(event);
+  events_.emplace_back(std::string(name), timestamp, attributes);
 }
 
 void SpanData::AddLink(const opentelemetry::trace::SpanContext &span_context,
                        const opentelemetry::common::KeyValueIterable &attributes) noexcept
 {
-  SpanDataLink link(span_context, attributes);
-  links_.push_back(link);
+  links_.emplace_back(span_context, attributes);
 }
 
 void SpanData::SetStatus(opentelemetry::trace::StatusCode code,

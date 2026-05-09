@@ -580,6 +580,21 @@ elif [[ "$1" == "bazel.with_async_export.test" ]]; then
   bazel $BAZEL_STARTUP_OPTIONS build $BAZEL_OPTIONS_ASYNC //...
   bazel $BAZEL_STARTUP_OPTIONS test $BAZEL_TEST_OPTIONS_ASYNC //...
   exit 0
+elif [[ "$1" == "cmake.benchmark" ]]; then
+  cd "${BUILD_DIR}"
+  rm -rf *
+  cmake "${CMAKE_OPTIONS[@]}"  \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=ON \
+        -DWITH_OTLP_GRPC=ON \
+        -DWITH_OTLP_HTTP=ON \
+        -DWITH_OTLP_FILE=ON \
+        -DBUILD_TESTING=ON \
+        -DWITH_BENCHMARK=ON \
+        -DWITH_EXAMPLES=ON \
+        "${SRC_DIR}"
+  cmake --build . "${CMAKE_BUILD_ARGS[@]}"
+  exit 0
 elif [[ "$1" == "bazel.benchmark" ]]; then
   run_benchmarks
   exit 0

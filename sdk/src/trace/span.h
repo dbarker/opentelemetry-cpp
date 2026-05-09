@@ -33,7 +33,7 @@ public:
        const opentelemetry::trace::SpanContextKeyValueIterable &links,
        const opentelemetry::trace::StartSpanOptions &options,
        const opentelemetry::trace::SpanContext &parent_span_context,
-       std::unique_ptr<opentelemetry::trace::SpanContext> span_context) noexcept;
+       opentelemetry::trace::SpanContext span_context) noexcept;
 
   Span(const Span &)            = delete;
   Span(Span &&)                 = delete;
@@ -76,7 +76,7 @@ public:
 
   opentelemetry::trace::SpanContext GetContext() const noexcept override
   {
-    return *span_context_.get();
+    return span_context_;
   }
 
 private:
@@ -84,7 +84,7 @@ private:
   mutable std::mutex mu_;
   std::unique_ptr<Recordable> recordable_;
   opentelemetry::common::SteadyTimestamp start_steady_time;
-  std::unique_ptr<opentelemetry::trace::SpanContext> span_context_;
+  opentelemetry::trace::SpanContext span_context_;
   bool has_ended_{false};
 };
 }  // namespace trace

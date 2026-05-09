@@ -35,8 +35,8 @@ namespace otlp
 class OtlpLogRecordable final : public opentelemetry::sdk::logs::Recordable
 {
 public:
-  proto::logs::v1::LogRecord &log_record() noexcept { return proto_record_; }
-  const proto::logs::v1::LogRecord &log_record() const noexcept { return proto_record_; }
+  proto::logs::v1::LogRecord &log_record() noexcept { return *proto_record_; }
+  const proto::logs::v1::LogRecord &log_record() const noexcept { return *proto_record_; }
 
   /** Returns the associated resource */
   const opentelemetry::sdk::resource::Resource &GetResource() const noexcept;
@@ -116,10 +116,11 @@ public:
                                    &instrumentation_scope) noexcept override;
 
 private:
-  proto::logs::v1::LogRecord proto_record_;
-  const opentelemetry::sdk::resource::Resource *resource_ = nullptr;
-  const opentelemetry::sdk::instrumentationscope::InstrumentationScope *instrumentation_scope_ =
-      nullptr;
+  google::protobuf::Arena arena_;
+  proto::logs::v1::LogRecord* proto_record_{google::protobuf::Arena::Create<proto::logs::v1::LogRecord>(&arena_)};
+  const opentelemetry::sdk::resource::Resource *resource_ {nullptr};
+  const opentelemetry::sdk::instrumentationscope::InstrumentationScope *instrumentation_scope_{
+      nullptr};
 };
 
 }  // namespace otlp

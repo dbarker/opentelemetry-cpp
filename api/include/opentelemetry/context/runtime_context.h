@@ -104,18 +104,18 @@ class OPENTELEMETRY_EXPORT RuntimeContext
 {
 public:
   // Return the current context.
-  static Context GetCurrent() noexcept { return GetRuntimeContextStorage()->GetCurrent(); }
+  static Context GetCurrent() noexcept { return GetStorage()->GetCurrent(); }
 
   // Sets the current 'Context' object. Returns a token
   // that can be used to reset to the previous Context.
   static nostd::unique_ptr<Token> Attach(const Context &context) noexcept
   {
-    return GetRuntimeContextStorage()->Attach(context);
+    return GetStorage()->Attach(context);
   }
 
   // Resets the context to a previous value stored in the
   // passed in token. Returns true if successful, false otherwise
-  static bool Detach(Token &token) noexcept { return GetRuntimeContextStorage()->Detach(token); }
+  static bool Detach(Token &token) noexcept { return GetStorage()->Detach(token); }
 
   // Sets the Key and Value into the passed in context or if a context is not
   // passed in, the RuntimeContext.

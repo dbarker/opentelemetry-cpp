@@ -46,7 +46,7 @@ public:
    * Get the name for this event
    * @return the name for this event
    */
-  std::string GetName() const noexcept { return name_; }
+  const std::string &GetName() const noexcept { return name_; }
 
   /**
    * Get the timestamp for this event
@@ -61,10 +61,12 @@ public:
   const std::unordered_map<std::string, opentelemetry::sdk::common::OwnedAttributeValue> &
   GetAttributes() const noexcept;
 
+  std::size_t GetAttributeCount() const noexcept { return attributes_.size(); }
+
 private:
   std::string name_;
   opentelemetry::common::SystemTimestamp timestamp_;
-  opentelemetry::sdk::common::AttributeMap attribute_map_;
+  std::unordered_map<std::string, opentelemetry::sdk::common::OwnedAttributeValue> attributes_;
 };
 
 /**
@@ -83,6 +85,8 @@ public:
   const std::unordered_map<std::string, opentelemetry::sdk::common::OwnedAttributeValue> &
   GetAttributes() const noexcept;
 
+  std::size_t GetAttributeCount() const noexcept { return attributes_.size(); }
+
   /**
    * Get the span context for this link
    * @return the span context for this link
@@ -91,7 +95,7 @@ public:
 
 private:
   opentelemetry::trace::SpanContext span_context_;
-  opentelemetry::sdk::common::AttributeMap attribute_map_;
+  std::unordered_map<std::string, opentelemetry::sdk::common::OwnedAttributeValue> attributes_;
 };
 
 /**
@@ -193,6 +197,20 @@ public:
   GetAttributes() const noexcept;
 
   /**
+   * Iterate attributes without building an intermediate map — use this on hot paths.
+   */
+  template <typename Fn>
+  void ForEachAttribute(Fn &&fn) const noexcept
+  {
+    for (const auto &kv : attributes_)
+    {
+      fn(kv.first, kv.second);
+    }
+  }
+
+  std::size_t GetAttributeCount() const noexcept { return attributes_.size(); }
+
+  /**
    * Get the events associated with this span
    * @return the events associated with this span
    */
@@ -209,6 +227,9 @@ public:
 
   void SetAttribute(nostd::string_view key,
                     const opentelemetry::common::AttributeValue &value) noexcept override;
+
+  void SetAttributes(
+      const opentelemetry::common::KeyValueIterable &attributes) noexcept override;
 
   void AddEvent(nostd::string_view name,
                 opentelemetry::common::SystemTimestamp timestamp =
@@ -245,7 +266,7 @@ private:
   std::string name_;
   opentelemetry::trace::StatusCode status_code_{opentelemetry::trace::StatusCode::kUnset};
   std::string status_desc_;
-  opentelemetry::sdk::common::AttributeMap attribute_map_;
+  std::unordered_map<std::string, opentelemetry::sdk::common::OwnedAttributeValue> attributes_;
   std::vector<SpanDataEvent> events_;
   std::vector<SpanDataLink> links_;
   opentelemetry::trace::TraceFlags flags_;

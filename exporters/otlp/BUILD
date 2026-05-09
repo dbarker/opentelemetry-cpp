@@ -991,6 +991,54 @@ cc_test(
 )
 
 otel_cc_benchmark(
+    name = "otlp_trace_recordable_benchmark",
+    srcs = ["test/otlp_trace_recordable_benchmark.cc"],
+    tags = [
+        "benchmark",
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_recordable",
+        "//sdk/src/resource",
+        "//sdk/src/trace",
+        "@com_github_opentelemetry_proto//:trace_service_proto_cc",
+    ],
+)
+
+otel_cc_benchmark(
+    name = "otlp_log_recordable_benchmark",
+    srcs = ["test/otlp_log_recordable_benchmark.cc"],
+    tags = [
+        "benchmark",
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_recordable",
+        "//sdk/src/logs",
+        "//sdk/src/resource",
+        "@com_github_opentelemetry_proto//:logs_service_proto_cc",
+    ],
+)
+
+otel_cc_benchmark(
+    name = "otlp_metric_utils_benchmark",
+    srcs = ["test/otlp_metric_utils_benchmark.cc"],
+    tags = [
+        "benchmark",
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_recordable",
+        "//sdk/src/metrics",
+        "//sdk/src/resource",
+        "@com_github_opentelemetry_proto//:metrics_service_proto_cc",
+    ],
+)
+
+otel_cc_benchmark(
     name = "otlp_grpc_exporter_benchmark",
     srcs = ["test/otlp_grpc_exporter_benchmark.cc"],
     tags = [

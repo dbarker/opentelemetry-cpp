@@ -65,6 +65,11 @@ public:
 
   std::unique_ptr<Recordable> MakeRecordable() noexcept override
   {
+    // Fast path: single processor — skip MultiRecordable allocation entirely.
+    if (count_ == 1)
+    {
+      return head_->value_->MakeRecordable();
+    }
     auto recordable       = std::unique_ptr<Recordable>(new MultiRecordable);
     auto multi_recordable = static_cast<MultiRecordable *>(recordable.get());
     ProcessorNode *node   = head_;
@@ -80,6 +85,12 @@ public:
   void OnStart(Recordable &span,
                const opentelemetry::trace::SpanContext &parent_context) noexcept override
   {
+    // Fast path: single processor — span is the raw recordable, no MultiRecordable wrapper.
+    if (count_ == 1)
+    {
+      head_->value_->OnStart(span, parent_context);
+      return;
+    }
     auto multi_recordable = static_cast<MultiRecordable *>(&span);
     ProcessorNode *node   = head_;
     while (node != nullptr)
@@ -96,6 +107,12 @@ public:
 
   void OnEnd(std::unique_ptr<Recordable> &&span) noexcept override
   {
+    // Fast path: single processor — pass recordable straight through.
+    if (count_ == 1)
+    {
+      head_->value_->OnEnd(std::move(span));
+      return;
+    }
     auto multi_recordable = static_cast<MultiRecordable *>(std::move(span).release());
     ProcessorNode *node   = head_;
     while (node != nullptr)

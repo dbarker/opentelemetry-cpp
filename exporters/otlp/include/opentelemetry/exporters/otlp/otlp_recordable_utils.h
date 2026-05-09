@@ -8,6 +8,7 @@
 #include "opentelemetry/nostd/span.h"
 #include "opentelemetry/sdk/logs/recordable.h"
 #include "opentelemetry/sdk/trace/recordable.h"
+#include "opentelemetry/sdk/trace/span_data.h"
 #include "opentelemetry/version.h"
 
 namespace opentelemetry
@@ -51,7 +52,19 @@ public:
       const nostd::span<std::unique_ptr<opentelemetry::sdk::trace::Recordable>> &spans,
       proto::collector::trace::v1::ExportTraceServiceRequest *request) noexcept;
 
+  static void PopulateRequestSpanData(
+      const nostd::span<std::unique_ptr<opentelemetry::sdk::trace::Recordable>> &spans,
+      proto::collector::trace::v1::ExportTraceServiceRequest *request) noexcept;
+
+  static void PopulateRequestPmrSpanData(
+      const nostd::span<std::unique_ptr<opentelemetry::sdk::trace::Recordable>> &spans,
+      proto::collector::trace::v1::ExportTraceServiceRequest *request) noexcept;
+
   static void PopulateRequest(
+      const nostd::span<std::unique_ptr<opentelemetry::sdk::logs::Recordable>> &logs,
+      proto::collector::logs::v1::ExportLogsServiceRequest *request) noexcept;
+
+  static void PopulateRequestLogData(
       const nostd::span<std::unique_ptr<opentelemetry::sdk::logs::Recordable>> &logs,
       proto::collector::logs::v1::ExportLogsServiceRequest *request) noexcept;
 };

@@ -70,6 +70,22 @@ public:
                             const opentelemetry::common::AttributeValue &value) noexcept = 0;
 
   /**
+   * Set multiple attributes at once from a KeyValueIterable.
+   * The default implementation calls SetAttribute per entry.
+   * Implementations may override to reserve capacity upfront using iterable.size().
+   */
+  virtual void SetAttributes(
+      const opentelemetry::common::KeyValueIterable &attributes) noexcept
+  {
+    attributes.ForEachKeyValue(
+        [this](opentelemetry::nostd::string_view key,
+               const opentelemetry::common::AttributeValue &value) noexcept {
+          SetAttribute(key, value);
+          return true;
+        });
+  }
+
+  /**
    * Add an event to a span.
    * @param name the name of the event
    * @param timestamp the timestamp of the event

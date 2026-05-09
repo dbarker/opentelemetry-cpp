@@ -17,12 +17,14 @@ static const std::string kBaggageHeader = "baggage";
 
 inline nostd::shared_ptr<Baggage> GetBaggage(const context::Context &context) noexcept
 {
-  context::ContextValue context_value = context.GetValue(kBaggageHeader);
-
-  if (const nostd::shared_ptr<Baggage> *value =
-          nostd::get_if<nostd::shared_ptr<Baggage>>(&context_value))
+  const context::ContextValue *context_value = context.GetValuePtr(kBaggageHeader);
+  if (context_value)
   {
-    return *value;
+    if (const nostd::shared_ptr<Baggage> *value =
+            nostd::get_if<nostd::shared_ptr<Baggage>>(context_value))
+    {
+      return *value;
+    }
   }
   static nostd::shared_ptr<Baggage> empty_baggage{new Baggage()};
   return empty_baggage;

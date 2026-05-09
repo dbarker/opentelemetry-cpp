@@ -50,14 +50,8 @@ const trace_api::SpanContext kSpanContext{
 class FakeServiceStub : public proto::collector::trace::v1::TraceService::StubInterface
 {
 public:
-#if defined(GRPC_CPP_VERSION_MAJOR) && \
-    (GRPC_CPP_VERSION_MAJOR * 1000 + GRPC_CPP_VERSION_MINOR) >= 1039
   using async_interface_base =
       proto::collector::trace::v1::TraceService::StubInterface::async_interface;
-#else
-  using async_interface_base =
-      proto::collector::trace::v1::TraceService::StubInterface::experimental_async_interface;
-#endif
 
   FakeServiceStub() : async_interface_(this) {}
 
@@ -77,30 +71,18 @@ public:
       callback(stub_->Export(context, *request, response));
     }
 
-#if defined(GRPC_CPP_VERSION_MAJOR) &&                                      \
-        (GRPC_CPP_VERSION_MAJOR * 1000 + GRPC_CPP_VERSION_MINOR) >= 1039 || \
-    defined(GRPC_CALLBACK_API_NONEXPERIMENTAL)
     void Export(
         ::grpc::ClientContext * /*context*/,
         const ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceRequest * /*request*/,
         ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceResponse * /*response*/,
         ::grpc::ClientUnaryReactor * /*reactor*/) override
     {}
-#else
-    void Export(
-        ::grpc::ClientContext * /*context*/,
-        const ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceRequest * /*request*/,
-        ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceResponse * /*response*/,
-        ::grpc::experimental::ClientUnaryReactor * /*reactor*/)
-    {}
-#endif
 
   private:
     FakeServiceStub *stub_;
   };
 
-  async_interface_base *async() { return &async_interface_; }
-  async_interface_base *experimental_async() { return &async_interface_; }
+  async_interface_base *async() override { return &async_interface_; }
 
   grpc::Status Export(grpc::ClientContext *,
                       const proto::collector::trace::v1::ExportTraceServiceRequest &,

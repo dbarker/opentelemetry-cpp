@@ -97,8 +97,7 @@ TEST(NoopTest, CreateSpanValidSpanContext)
   constexpr uint8_t buf_trace[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
   auto trace_id                 = trace_api::TraceId{buf_trace};
   auto span_id                  = trace_api::SpanId{buf_span};
-  auto span_context             = nonstd::unique_ptr<trace_api::SpanContext>(
-      new trace_api::SpanContext{trace_id, span_id, trace_api::TraceFlags{true}, false});
+  auto span_context             = trace_api::SpanContext{trace_id, span_id, trace_api::TraceFlags{true}, false};
   std::shared_ptr<trace_api::Tracer> tracer{new trace_api::NoopTracer{}};
   auto s1 =
       nonstd::shared_ptr<trace_api::Span>(new trace_api::NoopSpan(tracer, std::move(span_context)));

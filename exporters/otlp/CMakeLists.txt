@@ -1158,13 +1158,55 @@ if(BUILD_TESTING)
   endif()
 endif() # BUILD_TESTING
 
-if(WITH_BENCHMARK AND WITH_OTLP_HTTP)
-  add_executable(otlp_http_metric_exporter_benchmark
-                 benchmark/otlp_http_metric_exporter_benchmark.cc)
+if(WITH_BENCHMARK)
+
+  add_executable(otlp_metric_utils_benchmark
+                 test/otlp_metric_utils_benchmark.cc)
 
   target_link_libraries(
-    otlp_http_metric_exporter_benchmark
-    PRIVATE opentelemetry_exporter_otlp_http_metric opentelemetry_metrics
+    otlp_metric_utils_benchmark
+    PRIVATE opentelemetry_otlp_recordable opentelemetry_metrics
             opentelemetry_resources benchmark::benchmark
             ${CMAKE_THREAD_LIBS_INIT})
+
+  add_executable(otlp_trace_recordable_benchmark
+                 test/otlp_trace_recordable_benchmark.cc)
+
+  target_link_libraries(
+    otlp_trace_recordable_benchmark
+    PRIVATE opentelemetry_otlp_recordable opentelemetry_trace
+            opentelemetry_resources benchmark::benchmark
+            ${CMAKE_THREAD_LIBS_INIT})
+
+  add_executable(otlp_log_recordable_benchmark
+                 test/otlp_log_recordable_benchmark.cc)
+
+  target_link_libraries(
+    otlp_log_recordable_benchmark
+    PRIVATE opentelemetry_otlp_recordable opentelemetry_logs
+            opentelemetry_resources benchmark::benchmark
+            ${CMAKE_THREAD_LIBS_INIT})
+
+  if(WITH_OTLP_GRPC)
+    add_executable(otlp_grpc_exporter_benchmark
+                   test/otlp_grpc_exporter_benchmark.cc)
+
+    target_link_libraries(
+      otlp_grpc_exporter_benchmark
+      PRIVATE opentelemetry_exporter_otlp_grpc opentelemetry_metrics
+              common_foo_library opentelemetry_resources benchmark::benchmark
+              ${CMAKE_THREAD_LIBS_INIT})
+  endif()
+
+  if(WITH_OTLP_HTTP)
+    add_executable(otlp_http_metric_exporter_benchmark
+                   benchmark/otlp_http_metric_exporter_benchmark.cc)
+
+    target_link_libraries(
+      otlp_http_metric_exporter_benchmark
+      PRIVATE opentelemetry_exporter_otlp_http_metric opentelemetry_metrics
+              opentelemetry_resources benchmark::benchmark
+              ${CMAKE_THREAD_LIBS_INIT})
+  endif()
+
 endif()

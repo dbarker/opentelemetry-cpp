@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <stdint.h>
+#include <algorithm>
 #include <chrono>
 #include <string>
 
@@ -43,16 +44,16 @@ namespace otlp
 void OtlpRecordable::SetIdentity(const opentelemetry::trace::SpanContext &span_context,
                                  opentelemetry::trace::SpanId parent_span_id) noexcept
 {
-  span_.set_trace_id(reinterpret_cast<const char *>(span_context.trace_id().Id().data()),
+  span_->set_trace_id(reinterpret_cast<const char *>(span_context.trace_id().Id().data()),
                      trace::TraceId::kSize);
-  span_.set_span_id(reinterpret_cast<const char *>(span_context.span_id().Id().data()),
+  span_->set_span_id(reinterpret_cast<const char *>(span_context.span_id().Id().data()),
                     trace::SpanId::kSize);
   if (parent_span_id.IsValid())
   {
-    span_.set_parent_span_id(reinterpret_cast<const char *>(parent_span_id.Id().data()),
+    span_->set_parent_span_id(reinterpret_cast<const char *>(parent_span_id.Id().data()),
                              trace::SpanId::kSize);
   }
-  span_.set_trace_state(span_context.trace_state()->ToHeader());
+  span_->set_trace_state(span_context.trace_state()->ToHeader());
 }
 
 proto::resource::v1::Resource OtlpRecordable::ProtoResource() const noexcept
@@ -120,27 +121,46 @@ void OtlpRecordable::SetResource(const sdk::resource::Resource &resource) noexce
 void OtlpRecordable::SetAttribute(nostd::string_view key,
                                   const common::AttributeValue &value) noexcept
 {
-  if (static_cast<uint32_t>(span_.attributes_size()) >= max_attributes_)
+  if (static_cast<uint32_t>(span_->attributes_size()) >= max_attributes_)
   {
-    span_.set_dropped_attributes_count(span_.dropped_attributes_count() + 1);
+    span_->set_dropped_attributes_count(span_->dropped_attributes_count() + 1);
     return;
   }
 
-  auto *attribute = span_.add_attributes();
+  auto *attribute = span_->add_attributes();
   OtlpPopulateAttributeUtils::PopulateAttribute(attribute, key, value, false);
+}
+
+void OtlpRecordable::SetAttributes(
+    const opentelemetry::common::KeyValueIterable &attributes) noexcept
+{
+  const auto count = static_cast<int>(
+      std::min(static_cast<size_t>(attributes.size()),
+               static_cast<size_t>(max_attributes_) -
+                   static_cast<size_t>(span_->attributes_size())));
+  if (count > 0)
+  {
+    span_->mutable_attributes()->Reserve(span_->attributes_size() + count);
+  }
+  attributes.ForEachKeyValue(
+      [this](opentelemetry::nostd::string_view key,
+             const opentelemetry::common::AttributeValue &value) noexcept {
+        SetAttribute(key, value);
+        return true;
+      });
 }
 
 void OtlpRecordable::AddEvent(nostd::string_view name,
                               common::SystemTimestamp timestamp,
                               const common::KeyValueIterable &attributes) noexcept
 {
-  if (static_cast<uint32_t>(span_.events_size()) >= max_events_)
+  if (static_cast<uint32_t>(span_->events_size()) >= max_events_)
   {
-    span_.set_dropped_events_count(span_.dropped_events_count() + 1);
+    span_->set_dropped_events_count(span_->dropped_events_count() + 1);
     return;
   }
 
-  auto *event = span_.add_events();
+  auto *event = span_->add_events();
   event->set_name(name.data(), name.size());
   event->set_time_unix_nano(timestamp.time_since_epoch().count());
 
@@ -158,12 +178,12 @@ void OtlpRecordable::AddEvent(nostd::string_view name,
 void OtlpRecordable::AddLink(const trace::SpanContext &span_context,
                              const common::KeyValueIterable &attributes) noexcept
 {
-  if (static_cast<uint32_t>(span_.links_size()) >= max_links_)
+  if (static_cast<uint32_t>(span_->links_size()) >= max_links_)
   {
-    span_.set_dropped_links_count(span_.dropped_links_count() + 1);
+    span_->set_dropped_links_count(span_->dropped_links_count() + 1);
     return;
   }
-  auto *link = span_.add_links();
+  auto *link = span_->add_links();
   link->set_trace_id(reinterpret_cast<const char *>(span_context.trace_id().Id().data()),
                      trace::TraceId::kSize);
   link->set_span_id(reinterpret_cast<const char *>(span_context.span_id().Id().data()),
@@ -182,23 +202,23 @@ void OtlpRecordable::AddLink(const trace::SpanContext &span_context,
 
 void OtlpRecordable::SetStatus(trace::StatusCode code, nostd::string_view description) noexcept
 {
-  span_.mutable_status()->set_code(proto::trace::v1::Status_StatusCode(code));
+  span_->mutable_status()->set_code(proto::trace::v1::Status_StatusCode(code));
   if (code == trace::StatusCode::kError)
   {
-    span_.mutable_status()->set_message(description.data(), description.size());
+    span_->mutable_status()->set_message(description.data(), description.size());
   }
 }
 
 void OtlpRecordable::SetName(nostd::string_view name) noexcept
 {
-  span_.set_name(name.data(), name.size());
+  span_->set_name(name.data(), name.size());
 }
 
 void OtlpRecordable::SetTraceFlags(opentelemetry::trace::TraceFlags flags) noexcept
 {
   uint32_t all_flags = flags.flags() & opentelemetry::proto::trace::v1::SPAN_FLAGS_TRACE_FLAGS_MASK;
 
-  span_.set_flags(all_flags);
+  span_->set_flags(all_flags);
 }
 
 void OtlpRecordable::SetSpanKind(trace::SpanKind span_kind) noexcept
@@ -234,18 +254,18 @@ void OtlpRecordable::SetSpanKind(trace::SpanKind span_kind) noexcept
       proto_span_kind = proto::trace::v1::Span_SpanKind::Span_SpanKind_SPAN_KIND_UNSPECIFIED;
   }
 
-  span_.set_kind(proto_span_kind);
+  span_->set_kind(proto_span_kind);
 }
 
 void OtlpRecordable::SetStartTime(common::SystemTimestamp start_time) noexcept
 {
-  span_.set_start_time_unix_nano(start_time.time_since_epoch().count());
+  span_->set_start_time_unix_nano(start_time.time_since_epoch().count());
 }
 
 void OtlpRecordable::SetDuration(std::chrono::nanoseconds duration) noexcept
 {
-  const uint64_t unix_end_time = span_.start_time_unix_nano() + duration.count();
-  span_.set_end_time_unix_nano(unix_end_time);
+  const uint64_t unix_end_time = span_->start_time_unix_nano() + duration.count();
+  span_->set_end_time_unix_nano(unix_end_time);
 }
 
 void OtlpRecordable::SetInstrumentationScope(

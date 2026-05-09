@@ -188,6 +188,7 @@ public:
           attributes)
       : AttributeMap()
   {
+    this->reserve(attributes.size());
     for (auto &kv : attributes)
     {
       SetAttribute(kv.first, kv.second);
@@ -196,6 +197,7 @@ public:
 
   void ConstructFrom(const opentelemetry::common::KeyValueIterable &attributes)
   {
+    this->reserve(attributes.size());
     attributes.ForEachKeyValue(
         [&](nostd::string_view key, const opentelemetry::common::AttributeValue &value) noexcept {
           SetAttribute(key, value);
@@ -213,7 +215,7 @@ public:
   void SetAttribute(nostd::string_view key,
                     const opentelemetry::common::AttributeValue &value) noexcept
   {
-    (*this)[std::string(key)] = nostd::visit(AttributeConverter(), value);
+    this->insert_or_assign(std::string(key), nostd::visit(AttributeConverter(), value));
   }
 
   // Compare the attributes of this map with another KeyValueIterable
@@ -287,7 +289,7 @@ public:
   void SetAttribute(nostd::string_view key,
                     const opentelemetry::common::AttributeValue &value) noexcept
   {
-    (*this)[std::string(key)] = nostd::visit(AttributeConverter(), value);
+    this->insert_or_assign(std::string(key), nostd::visit(AttributeConverter(), value));
   }
 };
 

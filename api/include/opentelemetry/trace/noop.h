@@ -38,11 +38,11 @@ class OPENTELEMETRY_EXPORT NoopSpan final : public Span
 {
 public:
   explicit NoopSpan(const std::shared_ptr<Tracer> &tracer) noexcept
-      : tracer_{tracer}, span_context_{new SpanContext(false, false)}
+      : tracer_{tracer}, span_context_{false, false}
   {}
 
   explicit NoopSpan(const std::shared_ptr<Tracer> &tracer,
-                    nostd::unique_ptr<SpanContext> span_context) noexcept
+                    SpanContext span_context) noexcept
       : tracer_{tracer}, span_context_{std::move(span_context)}
   {}
 
@@ -81,11 +81,11 @@ public:
 
   bool IsRecording() const noexcept override { return false; }
 
-  SpanContext GetContext() const noexcept override { return *span_context_.get(); }
+  SpanContext GetContext() const noexcept override { return span_context_; }
 
 private:
   std::shared_ptr<Tracer> tracer_;
-  nostd::unique_ptr<SpanContext> span_context_;
+  SpanContext span_context_;
 };
 
 /**
