@@ -35,8 +35,7 @@ public:
       : trace_id_(),
         span_id_(),
         trace_flags_(trace::TraceFlags(static_cast<uint8_t>(sampled_flag))),
-        is_remote_(is_remote),
-        trace_state_(TraceState::GetDefault())
+        is_remote_(is_remote)
   {}
 
   SpanContext(TraceId trace_id,
@@ -64,7 +63,7 @@ public:
   const trace::SpanId &span_id() const noexcept { return span_id_; }
 
   // @returns the trace_state associated with this span_context
-  const nostd::shared_ptr<trace::TraceState> &trace_state() const noexcept { return trace_state_; }
+  const nostd::shared_ptr<trace::TraceState> &trace_state() const noexcept { return trace_state_ ? trace_state_ : trace::TraceState::GetDefault(); }
 
   /*
    * @param that SpanContext for comparing.

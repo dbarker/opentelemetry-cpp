@@ -5,7 +5,7 @@ add_subdirectory(propagation)
 
 include(GoogleTest)
 
-foreach(testname context_test runtime_context_test)
+foreach(testname context_test runtime_context_test stack_frame_context_storage_test)
   add_executable(${testname} "${testname}.cc")
   target_link_libraries(${testname} ${GTEST_BOTH_LIBRARIES}
                         ${CMAKE_THREAD_LIBS_INIT} opentelemetry_api)

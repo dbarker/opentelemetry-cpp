@@ -4,6 +4,8 @@
 #pragma once
 
 #include <cstring>
+#include <memory>
+#include <string>
 #include <utility>
 
 #include "opentelemetry/context/context_value.h"
@@ -29,13 +31,13 @@ public:
   // hold a shared_ptr to the head of the DataList linked list
   template <class T>
   Context(const T &keys_and_values) noexcept
-      : head_{nostd::shared_ptr<DataList>{new DataList(keys_and_values)}}
+      : head_{std::make_shared<DataList>(keys_and_values)}
   {}
 
   // Creates a context object from a key and value, this will
   // hold a shared_ptr to the head of the DataList linked list
   Context(nostd::string_view key, ContextValue value) noexcept
-      : head_{nostd::shared_ptr<DataList>{new DataList(key, std::move(value))}}
+      : head_{std::make_shared<DataList>(key, std::move(value))}
   {}
 
   // Accepts a new iterable and then returns a new context that
@@ -69,9 +71,9 @@ public:
   {
     for (DataList *data = head_.get(); data != nullptr; data = data->next_.get())
     {
-      if (key.size() == data->key_length_)
+      if (key.size() == data->key_.size())
       {
-        if (std::memcmp(key.data(), data->key_, data->key_length_) == 0)
+        if (std::memcmp(key.data(), data->key_.data(), key.size()) == 0)
         {
           return data->value_;
         }
@@ -86,9 +88,9 @@ public:
   {
     for (DataList *data = head_.get(); data != nullptr; data = data->next_.get())
     {
-      if (key.size() == data->key_length_)
+      if (key.size() == data->key_.size())
       {
-        if (std::memcmp(key.data(), data->key_, data->key_length_) == 0)
+        if (std::memcmp(key.data(), data->key_.data(), key.size()) == 0)
         {
           return &data->value_;
         }
@@ -109,12 +111,8 @@ private:
   // A linked list to contain the keys and values of this context node
   struct DataList
   {
-    char *key_{nullptr};
-
     nostd::shared_ptr<DataList> next_{nullptr};
-
-    size_t key_length_{};
-
+    std::string key_{};
     ContextValue value_;
 
     DataList() = default;
@@ -134,49 +132,29 @@ private:
         }
         else
         {
-          node->next_ = nostd::shared_ptr<DataList>(new DataList(iter.first, iter.second));
+          node->next_ = std::make_shared<DataList>(iter.first, iter.second);
           node        = node->next_.get();
         }
       }
     }
 
-    // Builds a data list with just a key and value, so it will just be the head
-    // and returns that head.
+    // Builds a data list with just a key and value.
     DataList(nostd::string_view key, ContextValue value)
-        : key_{new char[key.size()]},
-          next_{nostd::shared_ptr<DataList>{nullptr}},
-          key_length_{key.size()},
-          value_{std::move(value)}
-    {
-      std::memcpy(key_, key.data(), key.size() * sizeof(char));
-    }
+        : key_{key.data(), key.size()}, value_{std::move(value)}
+    {}
 
-    // Delete unused special member functions
-    DataList(const DataList &other)            = delete;
-    DataList(DataList &&other) noexcept        = delete;
-    DataList &operator=(const DataList &other) = delete;
+    DataList(const DataList &)            = delete;
+    DataList(DataList &&)                 = delete;
+    DataList &operator=(const DataList &) = delete;
 
-    // Move assignment operator is only called by DataList(const T &keys_and_vals)
-    // The moved to object has default member values
+    // Move assignment is used by DataList(const T &keys_and_vals) when
+    // initialising the head node in-place.
     DataList &operator=(DataList &&other) noexcept
     {
-      key_length_ = other.key_length_;
-      value_      = std::move(other.value_);
-      next_       = std::move(other.next_);
-
-      // key_ has a default nullptr value and does not need to be deleted before this assignment
-      key_       = other.key_;
-      other.key_ = nullptr;
-
+      key_   = std::move(other.key_);
+      value_ = std::move(other.value_);
+      next_  = std::move(other.next_);
       return *this;
-    }
-
-    ~DataList()
-    {
-      if (key_ != nullptr)
-      {
-        delete[] key_;
-      }
     }
   };
 

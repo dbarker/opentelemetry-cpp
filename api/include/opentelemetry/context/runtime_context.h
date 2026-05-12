@@ -127,16 +127,11 @@ public:
                           const ContextValue &value,
                           Context *context = nullptr) noexcept
   {
-    Context temp_context;
     if (context == nullptr)
     {
-      temp_context = GetCurrent();
+      return GetCurrent().SetValue(key, value);
     }
-    else
-    {
-      temp_context = *context;
-    }
-    return temp_context.SetValue(key, value);
+    return context->SetValue(key, value);
   }
 
   // Returns the value associated with the passed in key and either the
@@ -145,16 +140,11 @@ public:
   // essentially equivalent to RuntimeContext::GetCurrent().GetValue(key).
   static ContextValue GetValue(nostd::string_view key, Context *context = nullptr) noexcept
   {
-    Context temp_context;
     if (context == nullptr)
     {
-      temp_context = GetCurrent();
+      return GetCurrent().GetValue(key);
     }
-    else
-    {
-      temp_context = *context;
-    }
-    return temp_context.GetValue(key);
+    return context->GetValue(key);
   }
 
   /**
@@ -389,9 +379,137 @@ private:
   }
 };
 
+// ============================================================================
+// StackFrameContextStorage
+//
+// Allocation-efficient RuntimeContextStorage that keeps the context stack in a
+// thread-local inline array.  Token objects are allocated from a thread-local
+// slab pool so the common case (nesting depth ≤ kMaxDepth = 64) incurs zero
+// calls to malloc/free.  This is the default storage used by RuntimeContext.
+//
+// To override, call RuntimeContext::SetRuntimeContextStorage() early in main().
+// ============================================================================
+
+class StackFrameContextStorage : public RuntimeContextStorage
+{
+public:
+  static constexpr size_t kMaxDepth = 64;
+
+  Context GetCurrent() noexcept override
+  {
+    InlineStack &s = GetInlineStack();
+    if (s.size_ == 0 || s.size_ > kMaxDepth)
+    {
+      return Context{};
+    }
+    return s.frames_[s.size_ - 1];
+  }
+
+  nostd::unique_ptr<Token> Attach(const Context &ctx) noexcept override
+  {
+    InlineStack &s = GetInlineStack();
+    size_t depth   = s.size_;
+    if (depth < kMaxDepth)
+    {
+      s.frames_[depth] = ctx;
+    }
+    s.size_++;
+    return nostd::unique_ptr<Token>(new DepthToken(depth));
+  }
+
+  bool Detach(Token &token) noexcept override
+  {
+    auto &dt     = static_cast<DepthToken &>(token);
+    InlineStack &s = GetInlineStack();
+    if (dt.depth_ >= s.size_)
+    {
+      return false;
+    }
+    while (s.size_ > dt.depth_)
+    {
+      s.size_--;
+      if (s.size_ < kMaxDepth)
+      {
+        s.frames_[s.size_] = Context{};
+      }
+    }
+    return true;
+  }
+
+private:
+  struct InlineStack
+  {
+    Context frames_[kMaxDepth];
+    size_t size_ = 0;
+  };
+
+  static InlineStack &GetInlineStack() noexcept
+  {
+    static thread_local InlineStack stack;
+    return stack;
+  }
+
+  struct alignas(std::max_align_t) Slot
+  {
+    bool in_use_ = false;
+    char data_[64];
+  };
+
+  struct Pool
+  {
+    Slot slots_[kMaxDepth];
+
+    void *allocate() noexcept
+    {
+      for (auto &slot : slots_)
+      {
+        if (!slot.in_use_)
+        {
+          slot.in_use_ = true;
+          return slot.data_;
+        }
+      }
+      return ::operator new(64);
+    }
+
+    void deallocate(void *p) noexcept
+    {
+      for (auto &slot : slots_)
+      {
+        if (static_cast<void *>(slot.data_) == p)
+        {
+          slot.in_use_ = false;
+          return;
+        }
+      }
+      ::operator delete(p);
+    }
+  };
+
+  static Pool &GetPool() noexcept
+  {
+    static thread_local Pool pool;
+    return pool;
+  }
+
+  class DepthToken final : public Token
+  {
+  public:
+    explicit DepthToken(size_t depth) : Token(Context{}), depth_(depth) {}
+
+    static void *operator new(std::size_t) noexcept { return GetPool().allocate(); }
+    static void operator delete(void *ptr) noexcept { GetPool().deallocate(ptr); }
+
+    size_t depth_;
+  };
+
+  static_assert(sizeof(DepthToken) <= 64,
+                "DepthToken exceeds Slot::data_ capacity; increase Slot::data_ array size");
+};
+
 static RuntimeContextStorage *GetDefaultStorage() noexcept
 {
-  return new ThreadLocalContextStorage();
+  return new StackFrameContextStorage();
 }
 }  // namespace context
 OPENTELEMETRY_END_NAMESPACE

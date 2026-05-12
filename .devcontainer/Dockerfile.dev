@@ -25,7 +25,11 @@ RUN apt update && apt install -y wget gnupg lsb-release software-properties-comm
     clang-tidy-22 \
     shellcheck \
     sudo \
-    cmake
+    cmake \
+    libgoogle-perftools-dev \
+    linux-perf \
+    gdb \
+    valgrind
 
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-22 200 && \
     update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-22 200 && \

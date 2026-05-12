@@ -40,7 +40,13 @@ public:
     nostd::string_view baggage_str = carrier.Get(baggage::kBaggageHeader);
     auto baggage                   = baggage::Baggage::FromHeader(baggage_str);
 
-    if (baggage->ToHeader().size())
+    bool has_entries{false};
+    baggage->GetAllEntries([&has_entries](nostd::string_view, nostd::string_view) {
+      has_entries = true;
+      return false;  // stop iterating after first entry is found
+    });
+    
+    if (has_entries)
     {
       return baggage::SetBaggage(context, baggage);
     }

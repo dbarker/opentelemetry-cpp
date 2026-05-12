@@ -10,3 +10,9 @@ foreach(testname baggage_propagator_test)
     TEST_PREFIX baggage.
     TEST_LIST ${testname})
 endforeach()
+
+if(WITH_BENCHMARK)
+  add_executable(baggage_propagator_benchmark baggage_propagator_benchmark.cc)
+  target_link_libraries(baggage_propagator_benchmark benchmark::benchmark
+                        ${CMAKE_THREAD_LIBS_INIT} opentelemetry_api)
+endif()

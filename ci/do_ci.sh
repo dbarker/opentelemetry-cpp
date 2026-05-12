@@ -585,7 +585,6 @@ elif [[ "$1" == "cmake.benchmark" ]]; then
   rm -rf *
   cmake "${CMAKE_OPTIONS[@]}"  \
         -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=ON \
         -DWITH_OTLP_GRPC=ON \
         -DWITH_OTLP_HTTP=ON \
         -DWITH_OTLP_FILE=ON \
