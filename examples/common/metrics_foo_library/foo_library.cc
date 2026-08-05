@@ -84,7 +84,7 @@ void foo_library::counter_example(const std::string &name)
   {
     double val = (random_int() % 700) + 1.1;
     double_counter->Add(val);
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 }
 
@@ -98,7 +98,7 @@ void foo_library::observable_counter_example(const std::string &name)
   observable_counter->AddCallback(MeasurementFetcher::Fetcher, &fetcher);
   for (uint32_t i = 0; i < 20; ++i)
   {
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 }
 
@@ -115,7 +115,7 @@ void foo_library::histogram_example(const std::string &name)
     std::map<std::string, std::string> labels = get_random_attr();
     auto labelkv = opentelemetry::common::KeyValueIterableView<decltype(labels)>{labels};
     histogram_counter->Record(val, labelkv, context);
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 }
 
@@ -132,7 +132,7 @@ void foo_library::histogram_exp_example(const std::string &name)
     std::map<std::string, std::string> labels = get_random_attr();
     auto labelkv = opentelemetry::common::KeyValueIterableView<decltype(labels)>{labels};
     histogram_counter->Record(val, labelkv, context);
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 }
 
@@ -150,7 +150,7 @@ void foo_library::gauge_example(const std::string &name)
     std::map<std::string, std::string> labels = get_random_attr();
     auto labelkv = opentelemetry::common::KeyValueIterableView<decltype(labels)>{labels};
     gauge->Record(val, labelkv, context);
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 }
 #endif
@@ -166,7 +166,7 @@ void foo_library::semconv_counter_example()
   {
     double val = (random_int() % 700) + 1.1;
     double_counter->Add(val);
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 }
 
@@ -180,7 +180,7 @@ void foo_library::semconv_observable_counter_example()
   observable_counter->AddCallback(MeasurementFetcher::Fetcher, &fetcher);
   for (uint32_t i = 0; i < 20; ++i)
   {
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 }
 
@@ -198,6 +198,6 @@ void foo_library::semconv_histogram_example()
     std::map<std::string, std::string> labels = get_random_attr();
     auto labelkv = opentelemetry::common::KeyValueIterableView<decltype(labels)>{labels};
     histogram_counter->Record(int_val, labelkv, context);
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 }
