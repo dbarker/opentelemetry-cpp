@@ -641,7 +641,7 @@ TEST_F(SdkInstallTest, ConfigurationCoreCheck)
     model->meter_provider  = std::move(meter_config);
     model->propagator      = std::move(propagator_config);
 
-    ASSERT_NO_THROW(sdk = config_sdk::ConfiguredSdk::Create(registry, model));
+    ASSERT_NO_THROW(sdk = config_sdk::ConfiguredSdk::Create(std::move(registry), model));
     ASSERT_NE(sdk, nullptr);
     ASSERT_NE(sdk->tracer_provider, nullptr);
     ASSERT_NE(sdk->logger_provider, nullptr);

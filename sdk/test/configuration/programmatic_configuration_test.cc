@@ -42,6 +42,7 @@
 
 #include "opentelemetry/sdk/configuration/aggregation_configuration.h"
 #include "opentelemetry/sdk/configuration/always_off_sampler_configuration.h"
+#include "opentelemetry/sdk/configuration/attribute_limits_configuration.h"
 #include "opentelemetry/sdk/configuration/base2_exponential_bucket_histogram_aggregation_configuration.h"
 #include "opentelemetry/sdk/configuration/batch_log_record_processor_builder.h"
 #include "opentelemetry/sdk/configuration/batch_log_record_processor_configuration.h"
@@ -49,6 +50,12 @@
 #include "opentelemetry/sdk/configuration/batch_span_processor_configuration.h"
 #include "opentelemetry/sdk/configuration/configuration.h"
 #include "opentelemetry/sdk/configuration/configured_sdk.h"
+#include "opentelemetry/sdk/configuration/console_log_record_exporter_builder.h"
+#include "opentelemetry/sdk/configuration/console_log_record_exporter_configuration.h"
+#include "opentelemetry/sdk/configuration/console_push_metric_exporter_builder.h"
+#include "opentelemetry/sdk/configuration/console_push_metric_exporter_configuration.h"
+#include "opentelemetry/sdk/configuration/console_span_exporter_builder.h"
+#include "opentelemetry/sdk/configuration/console_span_exporter_configuration.h"
 #include "opentelemetry/sdk/configuration/explicit_bucket_histogram_aggregation_configuration.h"
 #include "opentelemetry/sdk/configuration/extension_log_record_exporter_builder.h"
 #include "opentelemetry/sdk/configuration/extension_log_record_exporter_configuration.h"
@@ -69,10 +76,32 @@
 #include "opentelemetry/sdk/configuration/meter_matcher_and_config_configuration.h"
 #include "opentelemetry/sdk/configuration/meter_provider_configuration.h"
 #include "opentelemetry/sdk/configuration/metric_reader_configuration.h"
+#include "opentelemetry/sdk/configuration/otlp_file_log_record_exporter_builder.h"
+#include "opentelemetry/sdk/configuration/otlp_file_log_record_exporter_configuration.h"
+#include "opentelemetry/sdk/configuration/otlp_file_push_metric_exporter_builder.h"
+#include "opentelemetry/sdk/configuration/otlp_file_push_metric_exporter_configuration.h"
+#include "opentelemetry/sdk/configuration/otlp_file_span_exporter_builder.h"
+#include "opentelemetry/sdk/configuration/otlp_file_span_exporter_configuration.h"
+#include "opentelemetry/sdk/configuration/otlp_grpc_log_record_exporter_builder.h"
+#include "opentelemetry/sdk/configuration/otlp_grpc_log_record_exporter_configuration.h"
+#include "opentelemetry/sdk/configuration/otlp_grpc_push_metric_exporter_builder.h"
+#include "opentelemetry/sdk/configuration/otlp_grpc_push_metric_exporter_configuration.h"
+#include "opentelemetry/sdk/configuration/otlp_grpc_span_exporter_builder.h"
+#include "opentelemetry/sdk/configuration/otlp_grpc_span_exporter_configuration.h"
+#include "opentelemetry/sdk/configuration/otlp_http_log_record_exporter_builder.h"
+#include "opentelemetry/sdk/configuration/otlp_http_log_record_exporter_configuration.h"
+#include "opentelemetry/sdk/configuration/otlp_http_push_metric_exporter_builder.h"
+#include "opentelemetry/sdk/configuration/otlp_http_push_metric_exporter_configuration.h"
+#include "opentelemetry/sdk/configuration/otlp_http_span_exporter_builder.h"
+#include "opentelemetry/sdk/configuration/otlp_http_span_exporter_configuration.h"
 #include "opentelemetry/sdk/configuration/parent_based_sampler_configuration.h"
 #include "opentelemetry/sdk/configuration/periodic_metric_reader_builder.h"
 #include "opentelemetry/sdk/configuration/periodic_metric_reader_configuration.h"
+#include "opentelemetry/sdk/configuration/prometheus_pull_metric_exporter_builder.h"
+#include "opentelemetry/sdk/configuration/prometheus_pull_metric_exporter_configuration.h"
 #include "opentelemetry/sdk/configuration/propagator_configuration.h"
+#include "opentelemetry/sdk/configuration/pull_metric_exporter_configuration.h"
+#include "opentelemetry/sdk/configuration/pull_metric_reader_configuration.h"
 #include "opentelemetry/sdk/configuration/push_metric_exporter_configuration.h"
 #include "opentelemetry/sdk/configuration/registry.h"
 #include "opentelemetry/sdk/configuration/registry_factory.h"
@@ -82,7 +111,9 @@
 #include "opentelemetry/sdk/configuration/simple_log_record_processor_configuration.h"
 #include "opentelemetry/sdk/configuration/simple_span_processor_configuration.h"
 #include "opentelemetry/sdk/configuration/span_exporter_configuration.h"
+#include "opentelemetry/sdk/configuration/span_limits_configuration.h"
 #include "opentelemetry/sdk/configuration/span_processor_configuration.h"
+#include "opentelemetry/sdk/configuration/text_map_propagator_builder.h"
 #include "opentelemetry/sdk/configuration/tracer_config_configuration.h"
 #include "opentelemetry/sdk/configuration/tracer_configurator_configuration.h"
 #include "opentelemetry/sdk/configuration/tracer_matcher_and_config_configuration.h"
@@ -117,6 +148,70 @@ namespace
 {
 
 constexpr std::chrono::milliseconds kProcessTimeout{1000};
+
+namespace
+{
+static std::unique_ptr<config_sdk::Configuration> MakeSpanConfig(
+    std::unique_ptr<config_sdk::SpanExporterConfiguration> exporter)
+{
+  auto processor      = std::make_unique<config_sdk::SimpleSpanProcessorConfiguration>();
+  processor->exporter = std::move(exporter);
+  auto tracer_config  = std::make_unique<config_sdk::TracerProviderConfiguration>();
+  tracer_config->processors.emplace_back(std::move(processor));
+  auto model             = std::make_unique<config_sdk::Configuration>();
+  model->resource        = std::make_unique<config_sdk::ResourceConfiguration>();
+  model->tracer_provider = std::move(tracer_config);
+  return model;
+}
+
+static std::unique_ptr<config_sdk::Configuration> MakeLogConfig(
+    std::unique_ptr<config_sdk::LogRecordExporterConfiguration> exporter)
+{
+  auto processor      = std::make_unique<config_sdk::SimpleLogRecordProcessorConfiguration>();
+  processor->exporter = std::move(exporter);
+  auto logger_config  = std::make_unique<config_sdk::LoggerProviderConfiguration>();
+  logger_config->processors.emplace_back(std::move(processor));
+  auto model             = std::make_unique<config_sdk::Configuration>();
+  model->resource        = std::make_unique<config_sdk::ResourceConfiguration>();
+  model->logger_provider = std::move(logger_config);
+  return model;
+}
+
+static std::unique_ptr<config_sdk::Configuration> MakePushMetricConfig(
+    std::unique_ptr<config_sdk::PushMetricExporterConfiguration> exporter)
+{
+  auto reader       = std::make_unique<config_sdk::PeriodicMetricReaderConfiguration>();
+  reader->exporter  = std::move(exporter);
+  auto meter_config = std::make_unique<config_sdk::MeterProviderConfiguration>();
+  meter_config->readers.emplace_back(std::move(reader));
+  auto model            = std::make_unique<config_sdk::Configuration>();
+  model->resource       = std::make_unique<config_sdk::ResourceConfiguration>();
+  model->meter_provider = std::move(meter_config);
+  return model;
+}
+
+static std::unique_ptr<config_sdk::Configuration> MakePullMetricConfig(
+    std::unique_ptr<config_sdk::PullMetricExporterConfiguration> exporter)
+{
+  auto reader       = std::make_unique<config_sdk::PullMetricReaderConfiguration>();
+  reader->exporter  = std::move(exporter);
+  auto meter_config = std::make_unique<config_sdk::MeterProviderConfiguration>();
+  meter_config->readers.emplace_back(std::move(reader));
+  auto model            = std::make_unique<config_sdk::Configuration>();
+  model->resource       = std::make_unique<config_sdk::ResourceConfiguration>();
+  model->meter_provider = std::move(meter_config);
+  return model;
+}
+
+static std::unique_ptr<config_sdk::Configuration> MakePropagatorConfig(const std::string &name)
+{
+  auto model                        = std::make_unique<config_sdk::Configuration>();
+  model->resource                   = std::make_unique<config_sdk::ResourceConfiguration>();
+  model->propagator                 = std::make_unique<config_sdk::PropagatorConfiguration>();
+  model->propagator->composite_list = name;
+  return model;
+}
+}  // namespace
 
 //---------------------------------------------------------------------------
 // ProgrammaticConfigTest fixture: This supports integration testing of the configured SDK.
@@ -331,6 +426,105 @@ TEST_F(ProgrammaticConfigTest, LoggerProviderWithLogRecordLimits)
   {
     EXPECT_EQ(nostd::get<std::string>(attr.second).size(), limits.attribute_value_length_limit);
   }
+}
+
+TEST_F(ProgrammaticConfigTest, AttributeLimitsAppliedToAllProviders)
+{
+  config_sdk::AttributeLimitsConfiguration attribute_limits;
+  attribute_limits.attribute_count_limit        = 2;
+  attribute_limits.attribute_value_length_limit = 5;
+
+  auto model = std::make_unique<config_sdk::Configuration>();
+  model->attribute_limits =
+      std::make_unique<config_sdk::AttributeLimitsConfiguration>(attribute_limits);
+  model->tracer_provider = MakeTracerProviderConfig();
+  model->logger_provider = MakeLoggerProviderConfig();
+  // no signal-specific limits: the fallback to top-level attribute_limits must apply to both
+
+  CreateAndInstallSdk(model);
+  ASSERT_NE(sdk_->tracer_provider, nullptr);
+  ASSERT_NE(sdk_->logger_provider, nullptr);
+
+  trace::Provider::GetTracerProvider()
+      ->GetTracer("test")
+      ->StartSpan("s", {{"k1", "value1"}, {"k2", "value2"}, {"k3", "value3"}})
+      ->End();
+  logs::Provider::GetLoggerProvider()->GetLogger("test")->EmitLogRecord(
+      logs::Severity::kInfo, nostd::string_view("body"),
+      common::MakeAttributes({{"k1", "value1"}, {"k2", "value2"}, {"k3", "value3"}}));
+
+  ASSERT_TRUE(sdk_->tracer_provider->ForceFlush(std::chrono::milliseconds(kProcessTimeout)));
+  ASSERT_TRUE(sdk_->tracer_provider->Shutdown(std::chrono::milliseconds(kProcessTimeout)));
+  ASSERT_TRUE(sdk_->logger_provider->ForceFlush(std::chrono::milliseconds(kProcessTimeout)));
+  ASSERT_TRUE(sdk_->logger_provider->Shutdown(std::chrono::milliseconds(kProcessTimeout)));
+
+  ASSERT_EQ(span_buffer_->size(), 1);
+  const auto &span_attrs = (*span_buffer_)[0]->GetAttributes();
+  EXPECT_EQ(span_attrs.size(), attribute_limits.attribute_count_limit);
+  for (const auto &attr : span_attrs)
+  {
+    EXPECT_EQ(nostd::get<std::string>(attr.second).size(),
+              attribute_limits.attribute_value_length_limit);
+  }
+
+  ASSERT_EQ(log_buffer_->size(), 1);
+  const auto &log_attrs = log_buffer_->front()->GetAttributes();
+  EXPECT_EQ(log_attrs.size(), attribute_limits.attribute_count_limit);
+  for (const auto &attr : log_attrs)
+  {
+    EXPECT_EQ(nostd::get<std::string>(attr.second).size(),
+              attribute_limits.attribute_value_length_limit);
+  }
+}
+
+TEST_F(ProgrammaticConfigTest, SignalLimitsOverrideAttributeLimits)
+{
+  // top-level: attribute_count_limit = 1 (very restrictive)
+  config_sdk::AttributeLimitsConfiguration attribute_limits;
+  attribute_limits.attribute_count_limit        = 1;
+  attribute_limits.attribute_value_length_limit = 100;
+
+  // signal-specific: attribute_count_limit = 2 — must win over top-level
+  config_sdk::SpanLimitsConfiguration span_limits;
+  span_limits.attribute_count_limit        = 2;
+  span_limits.attribute_value_length_limit = 100;
+
+  config_sdk::LogRecordLimitsConfiguration log_limits;
+  log_limits.attribute_count_limit        = 2;
+  log_limits.attribute_value_length_limit = 100;
+
+  auto model = std::make_unique<config_sdk::Configuration>();
+  model->attribute_limits =
+      std::make_unique<config_sdk::AttributeLimitsConfiguration>(attribute_limits);
+  model->tracer_provider = MakeTracerProviderConfig();
+  model->tracer_provider->limits =
+      std::make_unique<config_sdk::SpanLimitsConfiguration>(span_limits);
+  model->logger_provider = MakeLoggerProviderConfig();
+  model->logger_provider->limits =
+      std::make_unique<config_sdk::LogRecordLimitsConfiguration>(log_limits);
+
+  CreateAndInstallSdk(model);
+  ASSERT_NE(sdk_->tracer_provider, nullptr);
+  ASSERT_NE(sdk_->logger_provider, nullptr);
+
+  trace::Provider::GetTracerProvider()
+      ->GetTracer("test")
+      ->StartSpan("s", {{"k1", "v"}, {"k2", "v"}, {"k3", "v"}})
+      ->End();
+  logs::Provider::GetLoggerProvider()->GetLogger("test")->EmitLogRecord(
+      logs::Severity::kInfo, nostd::string_view("body"),
+      common::MakeAttributes({{"k1", "v"}, {"k2", "v"}, {"k3", "v"}}));
+
+  ASSERT_TRUE(sdk_->tracer_provider->ForceFlush(std::chrono::milliseconds(kProcessTimeout)));
+  ASSERT_TRUE(sdk_->tracer_provider->Shutdown(std::chrono::milliseconds(kProcessTimeout)));
+  ASSERT_TRUE(sdk_->logger_provider->ForceFlush(std::chrono::milliseconds(kProcessTimeout)));
+  ASSERT_TRUE(sdk_->logger_provider->Shutdown(std::chrono::milliseconds(kProcessTimeout)));
+
+  ASSERT_EQ(span_buffer_->size(), 1);
+  EXPECT_EQ((*span_buffer_)[0]->GetAttributes().size(), span_limits.attribute_count_limit);
+
+  ASSERT_EQ(log_buffer_->size(), 1);
+  EXPECT_EQ(log_buffer_->front()->GetAttributes().size(), log_limits.attribute_count_limit);
 }
 
 TEST_F(ProgrammaticConfigTest, LoggerProviderWithLoggerConfigurator)
@@ -960,4 +1154,529 @@ TEST_F(ProgrammaticConfigTest, PropagatorsComposite)
   ASSERT_NE(sdk_->propagator, nullptr);
 
   CheckPropagators();
+}
+
+TEST_F(ProgrammaticConfigTest, PropagatorsDuplicateNames)
+{
+  // Duplicate names in composite + composite_list must each be registered only once.
+  auto propagator_config = std::make_unique<config_sdk::PropagatorConfiguration>();
+  propagator_config->composite.emplace_back("tracecontext");
+  propagator_config->composite.emplace_back("baggage");
+  propagator_config->composite.emplace_back("b3");
+  propagator_config->composite.emplace_back("b3multi");
+  propagator_config->composite.emplace_back("jaeger");
+  // tracecontext and baggage duplicated via composite_list — must be skipped
+  propagator_config->composite_list = "tracecontext,baggage";
+
+  auto model             = std::make_unique<config_sdk::Configuration>();
+  model->tracer_provider = MakeTracerProviderConfig();
+  model->propagator      = std::move(propagator_config);
+
+  CreateAndInstallSdk(model);
+  ASSERT_NE(sdk_->propagator, nullptr);
+
+  CheckPropagators();
+}
+
+// ---------------------------------------------------------------------------
+// BuilderDispatchTest: each test registers only the one builder under test.
+// Any wrong dispatch throws UnsupportedException, failing the test immediately.
+
+namespace
+{
+
+class BuilderDispatchTest : public ::testing::Test
+{
+protected:
+  void SetUp() override
+  {
+    trace::Provider::SetTracerProvider({std::make_shared<trace::NoopTracerProvider>()});
+    logs::Provider::SetLoggerProvider({std::make_shared<logs::NoopLoggerProvider>()});
+    metrics::Provider::SetMeterProvider({std::make_shared<metrics::NoopMeterProvider>()});
+  }
+
+  void TearDown() override
+  {
+    if (sdk_)
+      sdk_->UnInstall();
+  }
+
+  void BuildAndInstall(std::shared_ptr<config_sdk::Registry> registry,
+                       std::unique_ptr<config_sdk::Configuration> model)
+  {
+    ASSERT_NO_THROW(sdk_ = config_sdk::ConfiguredSdk::Create(std::move(registry), model));
+    ASSERT_NE(sdk_, nullptr);
+    sdk_->Install();
+  }
+
+  // Registers all exporter builders with private buffers so only the cleared slot causes failure.
+  static void RegisterAllExporterBuilders(config_sdk::Registry *registry)
+  {
+    registry->SetConsoleSpanBuilder(
+        std::make_unique<config_test::RecordingConsoleSpanExporterBuilder>(
+            std::make_shared<config_test::SpanBuffer>()));
+    registry->SetOtlpHttpSpanBuilder(
+        std::make_unique<config_test::RecordingOtlpHttpSpanExporterBuilder>(
+            std::make_shared<config_test::SpanBuffer>()));
+    registry->SetOtlpGrpcSpanBuilder(
+        std::make_unique<config_test::RecordingOtlpGrpcSpanExporterBuilder>(
+            std::make_shared<config_test::SpanBuffer>()));
+    registry->SetOtlpFileSpanBuilder(
+        std::make_unique<config_test::RecordingOtlpFileSpanExporterBuilder>(
+            std::make_shared<config_test::SpanBuffer>()));
+    registry->SetConsoleLogRecordBuilder(
+        std::make_unique<config_test::RecordingConsoleLogRecordExporterBuilder>(
+            std::make_shared<config_test::LogRecordBuffer>()));
+    registry->SetOtlpHttpLogRecordBuilder(
+        std::make_unique<config_test::RecordingOtlpHttpLogRecordExporterBuilder>(
+            std::make_shared<config_test::LogRecordBuffer>()));
+    registry->SetOtlpGrpcLogRecordBuilder(
+        std::make_unique<config_test::RecordingOtlpGrpcLogRecordExporterBuilder>(
+            std::make_shared<config_test::LogRecordBuffer>()));
+    registry->SetOtlpFileLogRecordBuilder(
+        std::make_unique<config_test::RecordingOtlpFileLogRecordExporterBuilder>(
+            std::make_shared<config_test::LogRecordBuffer>()));
+    registry->SetConsolePushMetricExporterBuilder(
+        std::make_unique<config_test::RecordingConsolePushMetricExporterBuilder>(
+            std::make_shared<config_test::MetricBuffer>()));
+    registry->SetOtlpHttpPushMetricExporterBuilder(
+        std::make_unique<config_test::RecordingOtlpHttpPushMetricExporterBuilder>(
+            std::make_shared<config_test::MetricBuffer>()));
+    registry->SetOtlpGrpcPushMetricExporterBuilder(
+        std::make_unique<config_test::RecordingOtlpGrpcPushMetricExporterBuilder>(
+            std::make_shared<config_test::MetricBuffer>()));
+    registry->SetOtlpFilePushMetricExporterBuilder(
+        std::make_unique<config_test::RecordingOtlpFilePushMetricExporterBuilder>(
+            std::make_shared<config_test::MetricBuffer>()));
+    registry->SetPrometheusPullMetricExporterBuilder(
+        std::make_unique<config_test::RecordingPrometheusPullMetricExporterBuilder>(
+            std::make_shared<config_test::MetricBuffer>()));
+  }
+
+  std::unique_ptr<config_sdk::ConfiguredSdk> sdk_;
+};
+
+}  // namespace
+
+// --- Span exporter slots ---
+
+TEST_F(BuilderDispatchTest, ConsoleSpanExporterBuilder)
+{
+  auto buffer   = std::make_shared<config_test::SpanBuffer>();
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetConsoleSpanBuilder(
+      std::make_unique<config_test::RecordingConsoleSpanExporterBuilder>(buffer));
+  BuildAndInstall(std::move(registry),
+                  MakeSpanConfig(std::make_unique<config_sdk::ConsoleSpanExporterConfiguration>()));
+
+  trace::Provider::GetTracerProvider()->GetTracer("t")->StartSpan("console-span")->End();
+  sdk_->tracer_provider->ForceFlush(kProcessTimeout);
+
+  ASSERT_EQ(buffer->size(), 1u);
+  EXPECT_EQ((*buffer)[0]->GetName(), "console-span");
+}
+
+TEST_F(BuilderDispatchTest, OtlpHttpSpanExporterBuilder)
+{
+  auto buffer   = std::make_shared<config_test::SpanBuffer>();
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetOtlpHttpSpanBuilder(
+      std::make_unique<config_test::RecordingOtlpHttpSpanExporterBuilder>(buffer));
+  BuildAndInstall(
+      std::move(registry),
+      MakeSpanConfig(std::make_unique<config_sdk::OtlpHttpSpanExporterConfiguration>()));
+
+  trace::Provider::GetTracerProvider()->GetTracer("t")->StartSpan("otlp-http-span")->End();
+  sdk_->tracer_provider->ForceFlush(kProcessTimeout);
+
+  ASSERT_EQ(buffer->size(), 1u);
+  EXPECT_EQ((*buffer)[0]->GetName(), "otlp-http-span");
+}
+
+TEST_F(BuilderDispatchTest, OtlpGrpcSpanExporterBuilder)
+{
+  auto buffer   = std::make_shared<config_test::SpanBuffer>();
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetOtlpGrpcSpanBuilder(
+      std::make_unique<config_test::RecordingOtlpGrpcSpanExporterBuilder>(buffer));
+  BuildAndInstall(
+      std::move(registry),
+      MakeSpanConfig(std::make_unique<config_sdk::OtlpGrpcSpanExporterConfiguration>()));
+
+  trace::Provider::GetTracerProvider()->GetTracer("t")->StartSpan("otlp-grpc-span")->End();
+  sdk_->tracer_provider->ForceFlush(kProcessTimeout);
+
+  ASSERT_EQ(buffer->size(), 1u);
+  EXPECT_EQ((*buffer)[0]->GetName(), "otlp-grpc-span");
+}
+
+TEST_F(BuilderDispatchTest, OtlpFileSpanExporterBuilder)
+{
+  auto buffer   = std::make_shared<config_test::SpanBuffer>();
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetOtlpFileSpanBuilder(
+      std::make_unique<config_test::RecordingOtlpFileSpanExporterBuilder>(buffer));
+  BuildAndInstall(
+      std::move(registry),
+      MakeSpanConfig(std::make_unique<config_sdk::OtlpFileSpanExporterConfiguration>()));
+
+  trace::Provider::GetTracerProvider()->GetTracer("t")->StartSpan("otlp-file-span")->End();
+  sdk_->tracer_provider->ForceFlush(kProcessTimeout);
+
+  ASSERT_EQ(buffer->size(), 1u);
+  EXPECT_EQ((*buffer)[0]->GetName(), "otlp-file-span");
+}
+
+// --- Log record exporter slots ---
+
+TEST_F(BuilderDispatchTest, ConsoleLogRecordExporterBuilder)
+{
+  auto buffer   = std::make_shared<config_test::LogRecordBuffer>();
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetConsoleLogRecordBuilder(
+      std::make_unique<config_test::RecordingConsoleLogRecordExporterBuilder>(buffer));
+  BuildAndInstall(
+      std::move(registry),
+      MakeLogConfig(std::make_unique<config_sdk::ConsoleLogRecordExporterConfiguration>()));
+
+  logs::Provider::GetLoggerProvider()->GetLogger("t")->Info("log");
+  sdk_->logger_provider->ForceFlush(kProcessTimeout);
+
+  ASSERT_EQ(buffer->size(), 1u);
+}
+
+TEST_F(BuilderDispatchTest, OtlpHttpLogRecordExporterBuilder)
+{
+  auto buffer   = std::make_shared<config_test::LogRecordBuffer>();
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetOtlpHttpLogRecordBuilder(
+      std::make_unique<config_test::RecordingOtlpHttpLogRecordExporterBuilder>(buffer));
+  BuildAndInstall(
+      std::move(registry),
+      MakeLogConfig(std::make_unique<config_sdk::OtlpHttpLogRecordExporterConfiguration>()));
+
+  logs::Provider::GetLoggerProvider()->GetLogger("t")->Info("log");
+  sdk_->logger_provider->ForceFlush(kProcessTimeout);
+
+  ASSERT_EQ(buffer->size(), 1u);
+}
+
+TEST_F(BuilderDispatchTest, OtlpGrpcLogRecordExporterBuilder)
+{
+  auto buffer   = std::make_shared<config_test::LogRecordBuffer>();
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetOtlpGrpcLogRecordBuilder(
+      std::make_unique<config_test::RecordingOtlpGrpcLogRecordExporterBuilder>(buffer));
+  BuildAndInstall(
+      std::move(registry),
+      MakeLogConfig(std::make_unique<config_sdk::OtlpGrpcLogRecordExporterConfiguration>()));
+
+  logs::Provider::GetLoggerProvider()->GetLogger("t")->Info("log");
+  sdk_->logger_provider->ForceFlush(kProcessTimeout);
+
+  ASSERT_EQ(buffer->size(), 1u);
+}
+
+TEST_F(BuilderDispatchTest, OtlpFileLogRecordExporterBuilder)
+{
+  auto buffer   = std::make_shared<config_test::LogRecordBuffer>();
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetOtlpFileLogRecordBuilder(
+      std::make_unique<config_test::RecordingOtlpFileLogRecordExporterBuilder>(buffer));
+  BuildAndInstall(
+      std::move(registry),
+      MakeLogConfig(std::make_unique<config_sdk::OtlpFileLogRecordExporterConfiguration>()));
+
+  logs::Provider::GetLoggerProvider()->GetLogger("t")->Info("log");
+  sdk_->logger_provider->ForceFlush(kProcessTimeout);
+
+  ASSERT_EQ(buffer->size(), 1u);
+}
+
+// --- Push metric exporter slots ---
+
+TEST_F(BuilderDispatchTest, ConsolePushMetricExporterBuilder)
+{
+  auto buffer   = std::make_shared<config_test::MetricBuffer>();
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetConsolePushMetricExporterBuilder(
+      std::make_unique<config_test::RecordingConsolePushMetricExporterBuilder>(buffer));
+  registry->SetPeriodicMetricReaderBuilder(
+      std::make_unique<config_test::SyncPeriodicMetricReaderBuilder>());
+  BuildAndInstall(
+      std::move(registry),
+      MakePushMetricConfig(std::make_unique<config_sdk::ConsolePushMetricExporterConfiguration>()));
+
+  metrics::Provider::GetMeterProvider()->GetMeter("t")->CreateUInt64Counter("m")->Add(1);
+  sdk_->meter_provider->ForceFlush(kProcessTimeout);
+
+  ASSERT_FALSE(buffer->empty());
+}
+
+TEST_F(BuilderDispatchTest, OtlpHttpPushMetricExporterBuilder)
+{
+  auto buffer   = std::make_shared<config_test::MetricBuffer>();
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetOtlpHttpPushMetricExporterBuilder(
+      std::make_unique<config_test::RecordingOtlpHttpPushMetricExporterBuilder>(buffer));
+  registry->SetPeriodicMetricReaderBuilder(
+      std::make_unique<config_test::SyncPeriodicMetricReaderBuilder>());
+  BuildAndInstall(std::move(registry),
+                  MakePushMetricConfig(
+                      std::make_unique<config_sdk::OtlpHttpPushMetricExporterConfiguration>()));
+
+  metrics::Provider::GetMeterProvider()->GetMeter("t")->CreateUInt64Counter("m")->Add(1);
+  sdk_->meter_provider->ForceFlush(kProcessTimeout);
+
+  ASSERT_FALSE(buffer->empty());
+}
+
+TEST_F(BuilderDispatchTest, OtlpGrpcPushMetricExporterBuilder)
+{
+  auto buffer   = std::make_shared<config_test::MetricBuffer>();
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetOtlpGrpcPushMetricExporterBuilder(
+      std::make_unique<config_test::RecordingOtlpGrpcPushMetricExporterBuilder>(buffer));
+  registry->SetPeriodicMetricReaderBuilder(
+      std::make_unique<config_test::SyncPeriodicMetricReaderBuilder>());
+  BuildAndInstall(std::move(registry),
+                  MakePushMetricConfig(
+                      std::make_unique<config_sdk::OtlpGrpcPushMetricExporterConfiguration>()));
+
+  metrics::Provider::GetMeterProvider()->GetMeter("t")->CreateUInt64Counter("m")->Add(1);
+  sdk_->meter_provider->ForceFlush(kProcessTimeout);
+
+  ASSERT_FALSE(buffer->empty());
+}
+
+TEST_F(BuilderDispatchTest, OtlpFilePushMetricExporterBuilder)
+{
+  auto buffer   = std::make_shared<config_test::MetricBuffer>();
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetOtlpFilePushMetricExporterBuilder(
+      std::make_unique<config_test::RecordingOtlpFilePushMetricExporterBuilder>(buffer));
+  registry->SetPeriodicMetricReaderBuilder(
+      std::make_unique<config_test::SyncPeriodicMetricReaderBuilder>());
+  BuildAndInstall(std::move(registry),
+                  MakePushMetricConfig(
+                      std::make_unique<config_sdk::OtlpFilePushMetricExporterConfiguration>()));
+
+  metrics::Provider::GetMeterProvider()->GetMeter("t")->CreateUInt64Counter("m")->Add(1);
+  sdk_->meter_provider->ForceFlush(kProcessTimeout);
+
+  ASSERT_FALSE(buffer->empty());
+}
+
+// --- Prometheus pull metric slot ---
+
+TEST_F(BuilderDispatchTest, PrometheusPullMetricExporterBuilder)
+{
+  auto buffer   = std::make_shared<config_test::MetricBuffer>();
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetPrometheusPullMetricExporterBuilder(
+      std::make_unique<config_test::RecordingPrometheusPullMetricExporterBuilder>(buffer));
+  BuildAndInstall(std::move(registry),
+                  MakePullMetricConfig(
+                      std::make_unique<config_sdk::PrometheusPullMetricExporterConfiguration>()));
+
+  metrics::Provider::GetMeterProvider()->GetMeter("t")->CreateUInt64Counter("m")->Add(1);
+  sdk_->meter_provider->ForceFlush(kProcessTimeout);
+
+  ASSERT_FALSE(buffer->empty());
+}
+// ---------------------------------------------------------------------------
+// Unregistered builder slot tests: all other exporter slots are populated so
+// the failure is specific to the one cleared slot.
+
+TEST_F(BuilderDispatchTest, UnregisteredConsoleSpanBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  RegisterAllExporterBuilders(registry.get());
+  registry->SetConsoleSpanBuilder(nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(
+      std::move(registry),
+      MakeSpanConfig(std::make_unique<config_sdk::ConsoleSpanExporterConfiguration>()));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredOtlpHttpSpanBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  RegisterAllExporterBuilders(registry.get());
+  registry->SetOtlpHttpSpanBuilder(nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(
+      std::move(registry),
+      MakeSpanConfig(std::make_unique<config_sdk::OtlpHttpSpanExporterConfiguration>()));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredOtlpGrpcSpanBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  RegisterAllExporterBuilders(registry.get());
+  registry->SetOtlpGrpcSpanBuilder(nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(
+      std::move(registry),
+      MakeSpanConfig(std::make_unique<config_sdk::OtlpGrpcSpanExporterConfiguration>()));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredOtlpFileSpanBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  RegisterAllExporterBuilders(registry.get());
+  registry->SetOtlpFileSpanBuilder(nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(
+      std::move(registry),
+      MakeSpanConfig(std::make_unique<config_sdk::OtlpFileSpanExporterConfiguration>()));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredConsoleLogRecordBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  RegisterAllExporterBuilders(registry.get());
+  registry->SetConsoleLogRecordBuilder(nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(
+      std::move(registry),
+      MakeLogConfig(std::make_unique<config_sdk::ConsoleLogRecordExporterConfiguration>()));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredOtlpHttpLogRecordBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  RegisterAllExporterBuilders(registry.get());
+  registry->SetOtlpHttpLogRecordBuilder(nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(
+      std::move(registry),
+      MakeLogConfig(std::make_unique<config_sdk::OtlpHttpLogRecordExporterConfiguration>()));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredOtlpGrpcLogRecordBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  RegisterAllExporterBuilders(registry.get());
+  registry->SetOtlpGrpcLogRecordBuilder(nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(
+      std::move(registry),
+      MakeLogConfig(std::make_unique<config_sdk::OtlpGrpcLogRecordExporterConfiguration>()));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredOtlpFileLogRecordBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  RegisterAllExporterBuilders(registry.get());
+  registry->SetOtlpFileLogRecordBuilder(nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(
+      std::move(registry),
+      MakeLogConfig(std::make_unique<config_sdk::OtlpFileLogRecordExporterConfiguration>()));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredConsolePushMetricBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  RegisterAllExporterBuilders(registry.get());
+  registry->SetConsolePushMetricExporterBuilder(nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(
+      std::move(registry),
+      MakePushMetricConfig(std::make_unique<config_sdk::ConsolePushMetricExporterConfiguration>()));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredOtlpHttpPushMetricBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  RegisterAllExporterBuilders(registry.get());
+  registry->SetOtlpHttpPushMetricExporterBuilder(nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(
+      std::move(registry),
+      MakePushMetricConfig(
+          std::make_unique<config_sdk::OtlpHttpPushMetricExporterConfiguration>()));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredOtlpGrpcPushMetricBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  RegisterAllExporterBuilders(registry.get());
+  registry->SetOtlpGrpcPushMetricExporterBuilder(nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(
+      std::move(registry),
+      MakePushMetricConfig(
+          std::make_unique<config_sdk::OtlpGrpcPushMetricExporterConfiguration>()));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredOtlpFilePushMetricBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  RegisterAllExporterBuilders(registry.get());
+  registry->SetOtlpFilePushMetricExporterBuilder(nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(
+      std::move(registry),
+      MakePushMetricConfig(
+          std::make_unique<config_sdk::OtlpFilePushMetricExporterConfiguration>()));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredPrometheusPullMetricBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  RegisterAllExporterBuilders(registry.get());
+  registry->SetPrometheusPullMetricExporterBuilder(nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(
+      std::move(registry),
+      MakePullMetricConfig(
+          std::make_unique<config_sdk::PrometheusPullMetricExporterConfiguration>()));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+// ---------------------------------------------------------------------------
+// Unregistered propagator slot tests.
+
+TEST_F(BuilderDispatchTest, UnregisteredTraceContextPropagatorBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetTextMapPropagatorBuilder("tracecontext", nullptr);
+  auto sdk =
+      config_sdk::ConfiguredSdk::Create(std::move(registry), MakePropagatorConfig("tracecontext"));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredBaggagePropagatorBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetTextMapPropagatorBuilder("baggage", nullptr);
+  auto sdk =
+      config_sdk::ConfiguredSdk::Create(std::move(registry), MakePropagatorConfig("baggage"));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredB3PropagatorBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetTextMapPropagatorBuilder("b3", nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(std::move(registry), MakePropagatorConfig("b3"));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredB3MultiPropagatorBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetTextMapPropagatorBuilder("b3multi", nullptr);
+  auto sdk =
+      config_sdk::ConfiguredSdk::Create(std::move(registry), MakePropagatorConfig("b3multi"));
+  EXPECT_EQ(sdk, nullptr);
+}
+
+TEST_F(BuilderDispatchTest, UnregisteredJaegerPropagatorBuilder)
+{
+  auto registry = config_sdk::RegistryFactory::Create();
+  registry->SetTextMapPropagatorBuilder("jaeger", nullptr);
+  auto sdk = config_sdk::ConfiguredSdk::Create(std::move(registry), MakePropagatorConfig("jaeger"));
+  EXPECT_EQ(sdk, nullptr);
 }

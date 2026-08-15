@@ -2927,7 +2927,7 @@ std::unique_ptr<Configuration> ConfigurationParser::Parse(std::unique_ptr<Docume
     model->resource = ParseResourceConfiguration(child);
   }
 
-  // FIXME: instrumentation/development
+  // FIXME-CONFIG: instrumentation/development
 
   child = node->GetChildNode("distribution");
   if (child)

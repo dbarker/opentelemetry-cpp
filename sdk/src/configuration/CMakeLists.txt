@@ -25,12 +25,11 @@ target_include_directories(
 
 target_link_libraries(
   opentelemetry_configuration_core
-  PUBLIC opentelemetry_api opentelemetry_common opentelemetry_trace
-         opentelemetry_metrics opentelemetry_logs
-  PRIVATE)
+  PUBLIC opentelemetry_api opentelemetry_common opentelemetry_resources)
 
 # Trace SDK component builders
-add_library(opentelemetry_configuration_trace_builders trace_builders.cc)
+add_library(opentelemetry_configuration_trace_builders trace_builders.cc
+                                                       trace_builder_utils.cc)
 
 set_target_properties(opentelemetry_configuration_trace_builders
                       PROPERTIES EXPORT_NAME configuration_trace_builders)
@@ -47,7 +46,8 @@ target_link_libraries(
   PRIVATE opentelemetry_configuration_core)
 
 # Logs SDK component builders
-add_library(opentelemetry_configuration_logs_builders logs_builders.cc)
+add_library(opentelemetry_configuration_logs_builders logs_builders.cc
+                                                      logs_builder_utils.cc)
 
 set_target_properties(opentelemetry_configuration_logs_builders
                       PROPERTIES EXPORT_NAME configuration_logs_builders)
@@ -64,7 +64,8 @@ target_link_libraries(
   PRIVATE opentelemetry_configuration_core)
 
 # Metrics SDK component builders
-add_library(opentelemetry_configuration_metrics_builders metrics_builders.cc)
+add_library(opentelemetry_configuration_metrics_builders
+            metrics_builders.cc metrics_builder_utils.cc)
 
 set_target_properties(opentelemetry_configuration_metrics_builders
                       PROPERTIES EXPORT_NAME configuration_metrics_builders)

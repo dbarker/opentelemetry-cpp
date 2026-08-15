@@ -43,7 +43,9 @@ class ExtensionSpanProcessorBuilder;
 class HostResourceDetectorBuilder;
 class JaegerRemoteSamplerBuilder;
 class LoggerConfiguratorBuilder;
+class LoggerProviderBuilder;
 class MeterConfiguratorBuilder;
+class MeterProviderBuilder;
 class OpenCensusMetricProducerBuilder;
 class OtlpFileLogRecordExporterBuilder;
 class OtlpFilePushMetricExporterBuilder;
@@ -66,6 +68,7 @@ class SimpleSpanProcessorBuilder;
 class TextMapPropagatorBuilder;
 class TraceIdRatioBasedSamplerBuilder;
 class TracerConfiguratorBuilder;
+class TracerProviderBuilder;
 
 class OPENTELEMETRY_EXPORT Registry
 {
@@ -346,12 +349,35 @@ public:
 
   void SetLoggerConfiguratorBuilder(std::unique_ptr<LoggerConfiguratorBuilder> &&builder);
 
-  /* Resource detectors. */
+  /* Provider builders. */
+
+  const TracerProviderBuilder *GetTracerProviderBuilder() const
+  {
+    return tracer_provider_builder_.get();
+  }
+
+  void SetTracerProviderBuilder(std::unique_ptr<TracerProviderBuilder> &&builder);
+
+  const MeterProviderBuilder *GetMeterProviderBuilder() const
+  {
+    return meter_provider_builder_.get();
+  }
+
+  void SetMeterProviderBuilder(std::unique_ptr<MeterProviderBuilder> &&builder);
+
+  const LoggerProviderBuilder *GetLoggerProviderBuilder() const
+  {
+    return logger_provider_builder_.get();
+  }
+
+  void SetLoggerProviderBuilder(std::unique_ptr<LoggerProviderBuilder> &&builder);
 
   const ContainerResourceDetectorBuilder *GetContainerResourceDetectorBuilder() const
   {
     return container_resource_detector_builder_.get();
   }
+
+  /* Resource detectors. */
 
   void SetContainerResourceDetectorBuilder(
       std::unique_ptr<ContainerResourceDetectorBuilder> &&builder);
@@ -491,6 +517,10 @@ private:
   std::unique_ptr<TracerConfiguratorBuilder> tracer_configurator_builder_;
   std::unique_ptr<MeterConfiguratorBuilder> meter_configurator_builder_;
   std::unique_ptr<LoggerConfiguratorBuilder> logger_configurator_builder_;
+
+  std::unique_ptr<TracerProviderBuilder> tracer_provider_builder_;
+  std::unique_ptr<MeterProviderBuilder> meter_provider_builder_;
+  std::unique_ptr<LoggerProviderBuilder> logger_provider_builder_;
 
   std::unique_ptr<OpenCensusMetricProducerBuilder> open_census_metric_producer_builder_;
 
