@@ -540,8 +540,10 @@ if(OTELCPP_WITH_OTLP_FILE)
   # opentelemetry_exporter_otlp_file_client
   #
 
-  add_library(opentelemetry_exporter_otlp_file_client
-              ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_file_client.cc)
+  add_library(
+    opentelemetry_exporter_otlp_file_client
+    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_file_client.cc
+    src/otlp_file_builder_utils.cc)
   set_target_properties(opentelemetry_exporter_otlp_file_client
                         PROPERTIES EXPORT_NAME otlp_file_client)
   set_target_version(opentelemetry_exporter_otlp_file_client)

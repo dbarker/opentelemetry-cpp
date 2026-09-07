@@ -143,7 +143,7 @@ logger_provider:
             # Configure output stream.
             # Values include stdout, or scheme+destination. For example: file:///path/to/file.jsonl.
             # If omitted or null, stdout is used.
-            output_stream: file:///var/log/logs.jsonl
+            output_stream: file://otel-cpp-logs.jsonl
     - # Configure a batch log record processor.
       batch:
         # Configure exporter.
@@ -180,7 +180,7 @@ logger_provider:
     # Configure the default logger config used there is no matching entry in .logger_configurator/development.loggers.
     default_config:
       # Configure if the logger is enabled or not.
-      enabled: false
+      enabled: true
       # Configure minimum severity. Values include: trace, trace2, trace3, trace4, debug, debug2, debug3, debug4, info, info2, info3, info4, warn, warn2, warn3, warn4, error, error2, error3, error4, fatal, fatal2, fatal3, fatal4.
       # If omitted, severity filtering is not applied.
       minimum_severity: warn
@@ -437,7 +437,7 @@ meter_provider:
             # Configure output stream.
             # Values include stdout, or scheme+destination. For example: file:///path/to/file.jsonl.
             # If omitted or null, stdout is used.
-            output_stream: file:///var/log/metrics.jsonl
+            output_stream: file://otel-cpp-metrics.jsonl
             # Configure temporality preference. Values include: cumulative, delta, low_memory. For behavior of values, see https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk_exporters/otlp.md.
             # If omitted or null, cumulative is used.
             temporality_preference: delta
@@ -667,7 +667,7 @@ meter_provider:
     # Configure the default meter config used there is no matching entry in .meter_configurator/development.meters.
     default_config:
       # Configure if the meter is enabled or not.
-      enabled: false
+      enabled: true
     # Configure meters.
     meters:
       - # Configure meter names to match, evaluated as follows:
@@ -827,7 +827,7 @@ tracer_provider:
             # Configure output stream.
             # Values include stdout, or scheme+destination. For example: file:///path/to/file.jsonl.
             # If omitted or null, stdout is used.
-            output_stream: file:///var/log/traces.jsonl
+            output_stream: file://otel-cpp-traces.jsonl
     - # Configure a batch span processor.
       batch:
         # Configure exporter.
@@ -985,7 +985,7 @@ tracer_provider:
     # Configure the default tracer config used there is no matching entry in .tracer_configurator/development.tracers.
     default_config:
       # Configure if the tracer is enabled or not.
-      enabled: false
+      enabled: true
     # Configure tracers.
     tracers:
       - # Configure tracer names to match, evaluated as follows:

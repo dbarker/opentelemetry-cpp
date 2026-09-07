@@ -283,10 +283,12 @@ cc_library(
 cc_library(
     name = "otlp_file_client",
     srcs = [
+        "src/otlp_file_builder_utils.cc",
         "src/otlp_file_client.cc",
     ],
     hdrs = [
         "include/opentelemetry/exporters/otlp/otlp_environment.h",
+        "include/opentelemetry/exporters/otlp/otlp_file_builder_utils.h",
         "include/opentelemetry/exporters/otlp/otlp_file_client.h",
         "include/opentelemetry/exporters/otlp/otlp_file_client_options.h",
         "include/opentelemetry/exporters/otlp/otlp_file_client_runtime_options.h",

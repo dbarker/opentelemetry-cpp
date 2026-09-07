@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <memory>
-#include <string>
 #include <utility>
 
 #include "opentelemetry/exporters/otlp/otlp_builder_utils.h"
+#include "opentelemetry/exporters/otlp/otlp_file_builder_utils.h"
 #include "opentelemetry/exporters/otlp/otlp_file_metric_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_file_metric_exporter_options.h"
 #include "opentelemetry/exporters/otlp/otlp_file_push_metric_builder.h"
@@ -42,12 +42,7 @@ std::unique_ptr<opentelemetry::sdk::metrics::PushMetricExporter> OtlpFilePushMet
   }
 
   OtlpFileMetricExporterOptions options;
-
-  // FIXME: unclear how to map model->output_stream to a OtlpFileClientBackendOptions
-  if (!model->output_stream.empty())
-  {
-    OTEL_INTERNAL_LOG_WARN("[Otlp File Exporter] output_stream is not yet supported, ignoring");
-  }
+  options.backend_options = OtlpFileBuilderUtils::ConvertOutputStream(model->output_stream);
 
   options.aggregation_temporality =
       OtlpBuilderUtils::ConvertTemporalityPreference(model->temporality_preference);

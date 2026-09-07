@@ -7,6 +7,8 @@
 #include <opentelemetry/exporters/otlp/otlp_file_log_record_exporter_options.h>
 #include <opentelemetry/exporters/otlp/otlp_file_metric_exporter_options.h>
 
+#include <opentelemetry/exporters/otlp/otlp_file_builder_utils.h>
+
 #include <opentelemetry/exporters/otlp/otlp_file_client.h>
 #include <opentelemetry/exporters/otlp/otlp_file_exporter_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_file_log_record_exporter_factory.h>
@@ -72,4 +74,27 @@ TEST(ExportersOtlpFileBuilderInstall, OtlpFileLogRecordBuilder)
   opentelemetry::sdk::configuration::OtlpFileLogRecordExporterConfiguration model;
   auto exporter = builder->Build(&model);
   ASSERT_TRUE(exporter != nullptr);
+}
+
+TEST(ExportersOtlpFileBuilderInstall, OtlpFileBuilderUtilsConvertOutputStream)
+{
+  using opentelemetry::exporter::otlp::OtlpFileBuilderUtils;
+
+  {
+    auto backend_options = OtlpFileBuilderUtils::ConvertOutputStream("");
+    ASSERT_TRUE(opentelemetry::nostd::holds_alternative<std::reference_wrapper<std::ostream>>(
+        backend_options));
+  }
+
+  {
+    auto backend_options = OtlpFileBuilderUtils::ConvertOutputStream("stdout");
+    ASSERT_TRUE(opentelemetry::nostd::holds_alternative<std::reference_wrapper<std::ostream>>(
+        backend_options));
+  }
+
+  {
+    auto backend_options = OtlpFileBuilderUtils::ConvertOutputStream("file://otlp.log");
+    ASSERT_TRUE(opentelemetry::nostd::holds_alternative<
+                opentelemetry::exporter::otlp::OtlpFileClientFileSystemOptions>(backend_options));
+  }
 }
