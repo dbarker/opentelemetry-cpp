@@ -50,7 +50,7 @@ OTEL_CONFIG_SCHEMA=/path/to/opentelemetry_configuration.json ./ci/do_ci.sh valid
 
 ```sh
 ./ci/do_ci.sh cmake.maintainer.sync.test
-./ci/do_ci.sh cmake.c++20.stl.test
+CXX_STANDARD=20 OTELCPP_WITH_STL=ON ./ci/do_ci.sh cmake.cxx_standard.test
 ./ci/run_docker.sh ./ci/do_ci.sh bazel.test
 ```
 
@@ -65,11 +65,15 @@ CXX_STANDARD=14|17|20|23
 BUILD_SHARED_LIBS=ON|OFF
 OTELCPP_CMAKE_BUILD_ARGS=<cmake-build-args>
 OTELCPP_CMAKE_CACHE_FILE=<cache-file-name>
+OTELCPP_WITH_STL=OFF|ON|CXX14|CXX17|CXX20|CXX23
 ```
 
 `OTELCPP_CMAKE_CACHE_FILE` should be the basename of a cache file from
 `test_common/cmake`, for example `all-options-abiv1-preview.cmake` or
 `all-options-abiv2.cmake`.
+
+`OTELCPP_WITH_STL` is used by `cmake.cxx_standard.test`. `ON` selects the STL
+matching `CXX_STANDARD`.
 
 `OTELCPP_CMAKE_BUILD_ARGS` overrides the default `cmake --build` arguments
 (`--parallel`). For example, to limit parallelism and enable verbose output:
@@ -105,16 +109,16 @@ build all CMake components with preview options enabled.
 
 ### CMake language-standard matrix
 
-These tests build the core API and SDK components in maintainer mode.
+These tests build the core API and SDK components in maintainer mode with
+preview options enabled.
 
-* `cmake.c++14.test`: C++14, OTELCPP_WITH_STL=OFF
-* `cmake.c++17.test`: C++17, OTELCPP_WITH_STL=OFF
-* `cmake.c++20.test`: C++20, OTELCPP_WITH_STL=OFF
-* `cmake.c++23.test`: C++23, OTELCPP_WITH_STL=OFF
-* `cmake.c++14.stl.test`: C++14, OTELCPP_WITH_STL=CXX14
-* `cmake.c++17.stl.test`: C++17, OTELCPP_WITH_STL=CXX17
-* `cmake.c++20.stl.test`: C++20, OTELCPP_WITH_STL=CXX20
-* `cmake.c++23.stl.test`: C++23, OTELCPP_WITH_STL=CXX23
+* `cmake.cxx_standard.test`: Uses `CXX_STANDARD` and `OTELCPP_WITH_STL`
+  (default `OFF`). CI runs it for C++14, 17, 20 and 23 with STL on/off.
+
+Legacy aliases of `cmake.cxx_standard.test`:
+
+* `cmake.c++<NN>.test`: C++NN, OTELCPP_WITH_STL=OFF (NN = 14, 17, 20, 23)
+* `cmake.c++<NN>.stl.test`: C++NN, OTELCPP_WITH_STL=CXXNN
 
 ### CMake feature and packaging tests
 

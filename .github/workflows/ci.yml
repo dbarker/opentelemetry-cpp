@@ -538,9 +538,23 @@ jobs:
     - name: run cmake tests (enable opentracing-shim)
       run: ./ci/do_ci.sh cmake.opentracing_shim.test
 
-  cmake_test_cxx14_gcc:
-    name: CMake C++14 test(GCC)
-    runs-on: ubuntu-22.04
+  cmake_cxx_standard_test:
+    name: CMake C++${{ matrix.cxx_standard }} test(${{ matrix.compiler.name }}, STL ${{ matrix.stl }})
+    runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler:
+          - { name: gcc 15, cc: /usr/bin/gcc-15, cxx: /usr/bin/g++-15, cxxflags: '', libcxx: false }
+          - { name: clang 22 libc++, cc: /usr/bin/clang-22, cxx: /usr/bin/clang++-22, cxxflags: '-stdlib=libc++', libcxx: true }
+        cxx_standard: ['14', '17', '20', '23']
+        stl: ['OFF', 'ON']
+    env:
+      CC: ${{ matrix.compiler.cc }}
+      CXX: ${{ matrix.compiler.cxx }}
+      CXXFLAGS: ${{ matrix.compiler.cxxflags }}
+      CXX_STANDARD: ${{ matrix.cxx_standard }}
+      OTELCPP_WITH_STL: ${{ matrix.stl }}
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
@@ -554,162 +568,16 @@ jobs:
     - name: setup
       run: |
         sudo -E ./ci/setup_ci_environment.sh
-    - name: install dependencies
+    - name: install libc++
+      if: ${{ matrix.compiler.libcxx }}
+      run: |
+        sudo apt-get install -y --no-install-recommends libc++-22-dev libc++abi-22-dev
+    - name: install googletest and benchmark (C++14)
+      if: ${{ matrix.cxx_standard == '14' }}
       run: |
         sudo -E ./ci/install_thirdparty.sh --install-dir /usr/local --tags-file ./install/cmake/third_party_stable --packages "googletest;benchmark"
     - name: run tests
-      env:
-        CXX_STANDARD: '14'
-      run: ./ci/do_ci.sh cmake.c++14.test
-    - name: run tests (enable stl)
-      env:
-        CXX_STANDARD: '14'
-      run: ./ci/do_ci.sh cmake.c++14.stl.test
-
-  cmake_test_cxx17_gcc:
-    name: CMake C++17 test(GCC)
-    runs-on: ubuntu-22.04
-    steps:
-    - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
-      with:
-        egress-policy: audit
-
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      with:
-        persist-credentials: false
-        submodules: 'recursive'
-    - name: setup
-      run: |
-        sudo -E ./ci/setup_ci_environment.sh
-    - name: run tests
-      env:
-        CXX_STANDARD: '17'
-      run: ./ci/do_ci.sh cmake.c++17.test
-    - name: run tests (enable stl)
-      env:
-        CXX_STANDARD: '17'
-      run: ./ci/do_ci.sh cmake.c++17.stl.test
-
-  cmake_test_cxx20_gcc:
-    name: CMake C++20 test(GCC)
-    runs-on: ubuntu-22.04
-    steps:
-    - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
-      with:
-        egress-policy: audit
-
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      with:
-        persist-credentials: false
-        submodules: 'recursive'
-    - name: setup
-      run: |
-        sudo -E ./ci/setup_ci_environment.sh
-    - name: run tests
-      env:
-        CXX_STANDARD: '20'
-      run: ./ci/do_ci.sh cmake.c++20.test
-    - name: run tests (enable stl)
-      env:
-        CXX_STANDARD: '20'
-      run: ./ci/do_ci.sh cmake.c++20.stl.test
-
-  cmake_test_cxx20_clang:
-    name: CMake C++20 test(Clang with libc++)
-    runs-on: ubuntu-22.04
-    steps:
-    - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
-      with:
-        egress-policy: audit
-
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      with:
-        persist-credentials: false
-        submodules: 'recursive'
-    - name: setup
-      env:
-        CC: /usr/bin/clang
-        CXX: /usr/bin/clang++
-        CXXFLAGS: "-stdlib=libc++"
-      run: |
-        sudo -E ./ci/setup_ci_environment.sh
-    - name: run tests
-      env:
-        CC: /usr/bin/clang
-        CXX: /usr/bin/clang++
-        CXXFLAGS: "-stdlib=libc++"
-        CXX_STANDARD: '20'
-      run: ./ci/do_ci.sh cmake.c++20.test
-    - name: run tests (enable stl)
-      env:
-        CC: /usr/bin/clang
-        CXX: /usr/bin/clang++
-        CXXFLAGS: "-stdlib=libc++"
-        CXX_STANDARD: '20'
-      run: ./ci/do_ci.sh cmake.c++20.stl.test
-
-  cmake_test_cxx23_gcc:
-    name: CMake C++23 test(GCC)
-    runs-on: ubuntu-24.04
-    steps:
-    - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
-      with:
-        egress-policy: audit
-
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      with:
-        persist-credentials: false
-        submodules: 'recursive'
-    - name: setup
-      run: |
-        sudo -E ./ci/setup_ci_environment.sh
-    - name: run tests
-      env:
-        CXX_STANDARD: '23'
-      run: ./ci/do_ci.sh cmake.c++23.test
-    - name: run tests (enable stl)
-      env:
-        CXX_STANDARD: '23'
-      run: ./ci/do_ci.sh cmake.c++23.stl.test
-
-  cmake_test_cxx23_clang:
-    name: CMake C++23 test(Clang with libc++)
-    runs-on: ubuntu-22.04
-    steps:
-    - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
-      with:
-        egress-policy: audit
-
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      with:
-        persist-credentials: false
-        submodules: 'recursive'
-    - name: setup
-      env:
-        CC: /usr/bin/clang
-        CXX: /usr/bin/clang++
-        CXXFLAGS: "-stdlib=libc++"
-      run: |
-        sudo -E ./ci/setup_ci_environment.sh
-    - name: run tests
-      env:
-        CC: /usr/bin/clang
-        CXX: /usr/bin/clang++
-        CXXFLAGS: "-stdlib=libc++"
-        CXX_STANDARD: '23'
-      run: ./ci/do_ci.sh cmake.c++23.test
-    - name: run tests (enable stl)
-      env:
-        CC: /usr/bin/clang
-        CXX: /usr/bin/clang++
-        CXXFLAGS: "-stdlib=libc++"
-        CXX_STANDARD: '23'
-      run: ./ci/do_ci.sh cmake.c++23.stl.test
+      run: ./ci/do_ci.sh cmake.cxx_standard.test
 
   cmake_otprotocol_test:
     name: CMake test (with otlp-exporter)

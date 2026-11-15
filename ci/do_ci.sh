@@ -67,6 +67,20 @@ BAZEL_MACOS_TEST_OPTIONS="$BAZEL_MACOS_OPTIONS --test_output=errors"
 
 BAZEL_STARTUP_OPTIONS="--output_user_root=$HOME/.cache/bazel"
 
+# Legacy per-standard targets are aliases of cmake.cxx_standard.test.
+case "$1" in
+  cmake.c++[0-9][0-9].test)
+    CXX_STANDARD="${1:9:2}"
+    OTELCPP_WITH_STL=OFF
+    set -- cmake.cxx_standard.test
+    ;;
+  cmake.c++[0-9][0-9].stl.test)
+    CXX_STANDARD="${1:9:2}"
+    OTELCPP_WITH_STL=ON
+    set -- cmake.cxx_standard.test
+    ;;
+esac
+
 if [[ "${BUILD_TYPE}" =~ ^(Debug|Release|RelWithDebInfo|MinSizeRel)$ ]]; then
   CMAKE_OPTIONS=(-DCMAKE_BUILD_TYPE=${BUILD_TYPE})
 else
@@ -239,102 +253,18 @@ elif [[ "$1" == "cmake.opentracing_shim.install.test" ]]; then
         -S "${SRC_DIR}/install/test/cmake"
   ctest --output-on-failure
   exit 0
- elif [[ "$1" == "cmake.c++14.test" ]]; then
+elif [[ "$1" == "cmake.cxx_standard.test" ]]; then
+  STL_OPTION="${OTELCPP_WITH_STL:-OFF}"
+  if [[ "${STL_OPTION}" == "ON" ]]; then
+    STL_OPTION="CXX${CXX_STANDARD:-17}"
+  fi
   cd "${BUILD_DIR}"
   rm -rf *
   cmake "${CMAKE_OPTIONS[@]}"  \
-        -DCMAKE_CXX_STANDARD=14 \
         -DOTELCPP_MAINTAINER_MODE=ON \
         -DOTELCPP_WITH_ASYNC_EXPORT_PREVIEW=ON \
-        -DOTELCPP_WITH_STL=OFF \
-        "${SRC_DIR}"
-  cmake --build . "${CMAKE_BUILD_ARGS[@]}"
-  ctest --output-on-failure
-  exit 0
-elif [[ "$1" == "cmake.c++17.test" ]]; then
-  cd "${BUILD_DIR}"
-  rm -rf *
-  cmake "${CMAKE_OPTIONS[@]}"  \
-        -DCMAKE_CXX_STANDARD=17 \
-        -DOTELCPP_MAINTAINER_MODE=ON \
-        -DOTELCPP_WITH_ASYNC_EXPORT_PREVIEW=ON \
-        -DOTELCPP_WITH_STL=OFF \
-        "${SRC_DIR}"
-  cmake --build . "${CMAKE_BUILD_ARGS[@]}"
-  ctest --output-on-failure
-  exit 0
-elif [[ "$1" == "cmake.c++20.test" ]]; then
-  cd "${BUILD_DIR}"
-  rm -rf *
-  cmake "${CMAKE_OPTIONS[@]}"  \
-        -DCMAKE_CXX_STANDARD=20 \
-        -DOTELCPP_MAINTAINER_MODE=ON \
-        -DOTELCPP_WITH_ASYNC_EXPORT_PREVIEW=ON \
-        -DOTELCPP_WITH_STL=OFF \
-        "${SRC_DIR}"
-  cmake --build . "${CMAKE_BUILD_ARGS[@]}"
-  ctest --output-on-failure
-  exit 0
-elif [[ "$1" == "cmake.c++23.test" ]]; then
-  cd "${BUILD_DIR}"
-  rm -rf *
-  cmake "${CMAKE_OPTIONS[@]}"  \
-        -DCMAKE_CXX_STANDARD=23 \
-        -DOTELCPP_MAINTAINER_MODE=ON \
-        -DOTELCPP_WITH_ASYNC_EXPORT_PREVIEW=ON \
-        -DOTELCPP_WITH_STL=OFF \
-        "${SRC_DIR}"
-  cmake --build . "${CMAKE_BUILD_ARGS[@]}"
-  ctest --output-on-failure
-  exit 0
-elif [[ "$1" == "cmake.c++14.stl.test" ]]; then
-  cd "${BUILD_DIR}"
-  rm -rf *
-  cmake "${CMAKE_OPTIONS[@]}"  \
         -DOTELCPP_WITH_METRICS_EXEMPLAR_PREVIEW=ON \
-        -DCMAKE_CXX_STANDARD=14 \
-        -DOTELCPP_MAINTAINER_MODE=ON \
-        -DOTELCPP_WITH_ASYNC_EXPORT_PREVIEW=ON \
-        -DOTELCPP_WITH_STL=CXX14 \
-        "${SRC_DIR}"
-  cmake --build . "${CMAKE_BUILD_ARGS[@]}"
-  ctest --output-on-failure
-  exit 0
-elif [[ "$1" == "cmake.c++17.stl.test" ]]; then
-  cd "${BUILD_DIR}"
-  rm -rf *
-  cmake "${CMAKE_OPTIONS[@]}"  \
-        -DOTELCPP_WITH_METRICS_EXEMPLAR_PREVIEW=ON \
-        -DCMAKE_CXX_STANDARD=17 \
-        -DOTELCPP_MAINTAINER_MODE=ON \
-        -DOTELCPP_WITH_ASYNC_EXPORT_PREVIEW=ON \
-        -DOTELCPP_WITH_STL=CXX17 \
-        "${SRC_DIR}"
-  cmake --build . "${CMAKE_BUILD_ARGS[@]}"
-  ctest --output-on-failure
-  exit 0
-elif [[ "$1" == "cmake.c++20.stl.test" ]]; then
-  cd "${BUILD_DIR}"
-  rm -rf *
-  cmake "${CMAKE_OPTIONS[@]}"  \
-        -DOTELCPP_WITH_METRICS_EXEMPLAR_PREVIEW=ON \
-        -DCMAKE_CXX_STANDARD=20 \
-        -DOTELCPP_MAINTAINER_MODE=ON \
-        -DOTELCPP_WITH_ASYNC_EXPORT_PREVIEW=ON \
-        -DOTELCPP_WITH_STL=CXX20 \
-        "${SRC_DIR}"
-  cmake --build . "${CMAKE_BUILD_ARGS[@]}"
-  ctest --output-on-failure
-  exit 0
-elif [[ "$1" == "cmake.c++23.stl.test" ]]; then
-  cd "${BUILD_DIR}"
-  rm -rf *
-  cmake "${CMAKE_OPTIONS[@]}"  \
-        -DOTELCPP_WITH_METRICS_EXEMPLAR_PREVIEW=ON \
-        -DCMAKE_CXX_STANDARD=23 \
-        -DOTELCPP_MAINTAINER_MODE=ON \
-        -DOTELCPP_WITH_ASYNC_EXPORT_PREVIEW=ON \
-        -DOTELCPP_WITH_STL=CXX23 \
+        -DOTELCPP_WITH_STL="${STL_OPTION}" \
         "${SRC_DIR}"
   cmake --build . "${CMAKE_BUILD_ARGS[@]}"
   ctest --output-on-failure
