@@ -49,7 +49,8 @@ OTEL_CONFIG_SCHEMA=/path/to/opentelemetry_configuration.json ./ci/do_ci.sh valid
 ### Testing
 
 ```sh
-./ci/do_ci.sh cmake.maintainer.sync.test
+./ci/do_ci.sh cmake.maintainer.test
+OTELCPP_CMAKE_CACHE_FILE=all-options-abiv2.cmake ./ci/do_ci.sh cmake.maintainer.test
 CXX_STANDARD=20 OTELCPP_WITH_STL=ON ./ci/do_ci.sh cmake.cxx_standard.test
 ./ci/run_docker.sh ./ci/do_ci.sh bazel.test
 ```
@@ -97,15 +98,20 @@ OTELCPP_CMAKE_BUILD_ARGS="--parallel 2 --verbose" ./ci/do_ci.sh code.coverage
 
 ### Maintainer CMake builds
 
-These targets use the `all-options-*` cache files in `test_common/cmake` and
-build all CMake components with preview options enabled.
+These targets build all CMake components in maintainer mode using the
+`all-options-*` cache files in `test_common/cmake`.
 
-* `cmake.maintainer.sync.test`: Maintainer mode ABI v1 build with synchronous
-  export and tests.
-* `cmake.maintainer.async.test`: Maintainer mode ABI v1 build with async export
-  and tests.
-* `cmake.maintainer.abiv2.test`: Maintainer mode ABI v2 build and tests.
+* `cmake.maintainer.test`: Maintainer mode build and tests using the cache
+  file from `OTELCPP_CMAKE_CACHE_FILE` (default
+  `all-options-abiv1-preview.cmake`). CI runs it for ABI v1/v2 with preview
+  options on/off.
 * `cmake.maintainer.yaml.test`: Maintainer mode build with YAML configuration.
+
+Legacy aliases of `cmake.maintainer.test`:
+
+* `cmake.maintainer.sync.test`: ABI v1 with preview options, async export off.
+* `cmake.maintainer.async.test`: ABI v1 with preview options.
+* `cmake.maintainer.abiv2.test`: ABI v2 with preview options, async export off.
 
 ### CMake language-standard matrix
 

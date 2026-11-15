@@ -67,8 +67,23 @@ BAZEL_MACOS_TEST_OPTIONS="$BAZEL_MACOS_OPTIONS --test_output=errors"
 
 BAZEL_STARTUP_OPTIONS="--output_user_root=$HOME/.cache/bazel"
 
-# Legacy per-standard targets are aliases of cmake.cxx_standard.test.
+# Legacy per-variant targets are aliases of cmake.maintainer.test and cmake.cxx_standard.test.
+MAINTAINER_EXTRA_OPTIONS=()
 case "$1" in
+  cmake.maintainer.sync.test)
+    OTELCPP_CMAKE_CACHE_FILE=all-options-abiv1-preview.cmake
+    MAINTAINER_EXTRA_OPTIONS=(-DOTELCPP_WITH_ASYNC_EXPORT_PREVIEW=OFF)
+    set -- cmake.maintainer.test
+    ;;
+  cmake.maintainer.async.test)
+    OTELCPP_CMAKE_CACHE_FILE=all-options-abiv1-preview.cmake
+    set -- cmake.maintainer.test
+    ;;
+  cmake.maintainer.abiv2.test)
+    OTELCPP_CMAKE_CACHE_FILE=all-options-abiv2-preview.cmake
+    MAINTAINER_EXTRA_OPTIONS=(-DOTELCPP_WITH_ASYNC_EXPORT_PREVIEW=OFF)
+    set -- cmake.maintainer.test
+    ;;
   cmake.c++[0-9][0-9].test)
     CXX_STANDARD="${1:9:2}"
     OTELCPP_WITH_STL=OFF
@@ -132,40 +147,15 @@ if [[ "$1" == "cmake.test" ]]; then
   cmake --build . "${CMAKE_BUILD_ARGS[@]}"
   ctest --output-on-failure
   exit 0
-elif [[ "$1" == "cmake.maintainer.sync.test" ]]; then
+elif [[ "$1" == "cmake.maintainer.test" ]]; then
   cd "${BUILD_DIR}"
   rm -rf *
   cmake "${CMAKE_OPTIONS[@]}"  \
-        -C ${SRC_DIR}/test_common/cmake/all-options-abiv1-preview.cmake \
-        -DOTELCPP_WITH_OPENTRACING=OFF \
-        -DOTELCPP_WITH_ASYNC_EXPORT_PREVIEW=OFF \
-        -DOTELCPP_MAINTAINER_MODE=ON \
-        -DOTELCPP_WITH_NO_DEPRECATED_CODE=ON \
-        "${SRC_DIR}"
-  cmake --build . "${CMAKE_BUILD_ARGS[@]}"
-  ctest --output-on-failure
-  exit 0
-elif [[ "$1" == "cmake.maintainer.async.test" ]]; then
-  cd "${BUILD_DIR}"
-  rm -rf *
-  cmake "${CMAKE_OPTIONS[@]}"  \
-        -C ${SRC_DIR}/test_common/cmake/all-options-abiv1-preview.cmake \
+        -C "${OTELCPP_CMAKE_CACHE_FILE_PATH}" \
         -DOTELCPP_WITH_OPENTRACING=OFF \
         -DOTELCPP_MAINTAINER_MODE=ON \
         -DOTELCPP_WITH_NO_DEPRECATED_CODE=ON \
-        "${SRC_DIR}"
-  cmake --build . "${CMAKE_BUILD_ARGS[@]}"
-  ctest --output-on-failure
-  exit 0
-elif [[ "$1" == "cmake.maintainer.abiv2.test" ]]; then
-  cd "${BUILD_DIR}"
-  rm -rf *
-  cmake "${CMAKE_OPTIONS[@]}"  \
-        -C ${SRC_DIR}/test_common/cmake/all-options-abiv2-preview.cmake \
-        -DOTELCPP_WITH_OPENTRACING=OFF \
-        -DOTELCPP_WITH_ASYNC_EXPORT_PREVIEW=OFF \
-        -DOTELCPP_MAINTAINER_MODE=ON \
-        -DOTELCPP_WITH_NO_DEPRECATED_CODE=ON \
+        "${MAINTAINER_EXTRA_OPTIONS[@]}" \
         "${SRC_DIR}"
   cmake --build . "${CMAKE_BUILD_ARGS[@]}"
   ctest --output-on-failure
