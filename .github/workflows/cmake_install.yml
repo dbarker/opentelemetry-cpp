@@ -11,8 +11,36 @@ permissions:
   contents: read
 
 jobs:
+  cmake_install_functions:
+    name: CMake ${{ matrix.cmake_version }} install functions test (ubuntu-26.04)
+    runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cmake_version: ['3.16.0', '3.31.6', '4.5.0']
+    env:
+      INSTALL_TEST_DIR: '/home/runner/install_test'
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+      with:
+        egress-policy: audit
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+        submodules: 'recursive'
+    - name: Setup CI Environment
+      run: |
+        sudo ./ci/setup_ci_environment.sh
+    - name: Install CMake
+      run: |
+        sudo env "CMAKE_VERSION=${{ matrix.cmake_version }}" ./ci/setup_cmake.sh
+    - name: Run Install Functions Tests
+      run: ./ci/do_ci.sh cmake.install_functions.test
+
   windows_2022_vcpkg_submodule:
     name: Windows 2022 vcpkg submodule versions cxx17 (static libs - dll)
+    needs: cmake_install_functions
     runs-on: windows-2022
     env:
       # cxx17 is the default for windows-2022
@@ -30,8 +58,6 @@ jobs:
       - name: Build dependencies with vcpkg submodule
         run: |
           ./ci/setup_windows_ci_environment.ps1
-      - name: Run Install Functions Tests
-        run: ./ci/do_ci.ps1 cmake.install_functions.test
       - name: Run Tests
         run: ./ci/do_ci.ps1 cmake.install.test
       - name: Run DLL Tests
@@ -39,6 +65,7 @@ jobs:
 
   windows_2025_vcpkg_submodule:
     name: Windows 2025 vcpkg submodule versions cxx20 (static libs)
+    needs: cmake_install_functions
     runs-on: windows-2025
     env:
       CXX_STANDARD: '20'
@@ -55,17 +82,19 @@ jobs:
       - name: Build dependencies with vcpkg submodule
         run: |
           ./ci/setup_windows_ci_environment.ps1
-      - name: Run Install Functions Tests
-        run: ./ci/do_ci.ps1 cmake.install_functions.test
       - name: Run Tests
         run: ./ci/do_ci.ps1 cmake.install.test
 
-  ubuntu_2404_system_packages:
-    name: Ubuntu 24.04 apt packages cxx17 (static libs - shared libs)
-    runs-on: ubuntu-24.04
+  ubuntu_system_packages:
+    name: ${{ matrix.os }} apt packages cxx17 (static libs - shared libs)
+    needs: cmake_install_functions
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-26.04]
     env:
       INSTALL_TEST_DIR: '/home/runner/install_test'
-      # cxx17 is the default for Ubuntu 24.04
       CXX_STANDARD: '17'
       BUILD_TYPE: 'Debug'
       # Enable the pkg-config consumer test for this system-package job only.
@@ -87,13 +116,11 @@ jobs:
       run: |
         sudo -E apt-get update
         # libcurl.pc --static emits unversioned private libs (nghttp2, idn2, rtmp,
-        # ssh, psl, gssapi_krb5, lber/ldap, brotlidec). libcurl4-openssl-dev pulls
-        # only the runtime SONAMEs; the matching -dev packages provide the linker
-        # names. Do not encode these in OTel .pc files.
-        sudo -E apt-get install -y libabsl-dev libcurl4-openssl-dev zlib1g-dev nlohmann-json3-dev libprotobuf-dev libgrpc++-dev protobuf-compiler protobuf-compiler-grpc libnghttp2-dev libidn2-dev librtmp-dev libssh-dev libpsl-dev libkrb5-dev libldap2-dev libbrotli-dev
-        sudo -E ./ci/install_thirdparty.sh --install-dir /usr/local --tags-file third_party_release --packages "googletest;benchmark"
-    - name: Run Install Functions Tests
-      run: ./ci/do_ci.sh cmake.install_functions.test
+        # ssh, psl, gssapi_krb5, lber/ldap, brotlidec, gpg-error, unistring).
+        # libcurl4-openssl-dev pulls only the runtime SONAMEs; the matching -dev
+        # packages provide the linker names. Do not encode these in OTel .pc files.
+        sudo -E apt-get install -y libabsl-dev libcurl4-openssl-dev zlib1g-dev nlohmann-json3-dev libprotobuf-dev libgrpc++-dev protobuf-compiler protobuf-compiler-grpc libnghttp2-dev libidn2-dev librtmp-dev libssh-dev libpsl-dev libkrb5-dev libldap2-dev libbrotli-dev libgpg-error-dev libunistring-dev
+        sudo -E ./ci/install_thirdparty.sh --install-dir /usr/local --build-type Release --tags-file third_party_release --packages "googletest;benchmark"
     - name: Run Tests (static libs)
       env:
         BUILD_SHARED_LIBS: 'OFF'
@@ -103,13 +130,24 @@ jobs:
         BUILD_SHARED_LIBS: 'ON'
       run: ./ci/do_ci.sh cmake.install.test
 
-  ubuntu_2404_latest:
-    name: Ubuntu 24.04 latest versions cxx20 (static libs - shared libs)
-    runs-on: ubuntu-24.04
+  ubuntu_thirdparty_packages:
+    name: ${{ matrix.os }} ${{ matrix.versions }} versions cxx${{ matrix.cxx_standard }} (static libs - shared libs)
+    needs: cmake_install_functions
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-26.04, versions: latest, cxx_standard: '20', cmake_version: '4.5.0' }
+          - { os: ubuntu-24.04, versions: stable, cxx_standard: '17', cmake_version: '3.31.6' }
+          # 3.16.0 is the current minimum version of cmake
+          - { os: ubuntu-22.04, versions: minimum, cxx_standard: '14', cmake_version: '3.16.0' }
     env:
       INSTALL_TEST_DIR: '/home/runner/install_test'
-      CXX_STANDARD: '20'
+      CXX_STANDARD: ${{ matrix.cxx_standard }}
       BUILD_TYPE: 'Debug'
+      # opentracing-cpp is omitted; cmake.install.test (ABI v2) does not build the opentracing shim
+      THIRDPARTY_PACKAGES: 'abseil;zlib;curl;protobuf;grpc;benchmark;googletest;ms-gsl;nlohmann-json;opentelemetry-proto;prometheus-cpp;ryml'
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
@@ -122,11 +160,12 @@ jobs:
     - name: Setup CI Environment
       run: |
         sudo -E ./ci/setup_ci_environment.sh
+    - name: Install CMake
+      run: |
+        sudo env "CMAKE_VERSION=${{ matrix.cmake_version }}" ./ci/setup_cmake.sh
     - name: Install Dependencies
       run: |
-        sudo -E ./ci/install_thirdparty.sh --install-dir /usr/local --tags-file install/cmake/third_party_latest
-    - name: Run Install Functions Tests
-      run: ./ci/do_ci.sh cmake.install_functions.test
+        sudo env "CXX_STANDARD=$CXX_STANDARD" ./ci/install_thirdparty.sh --install-dir /usr/local --build-type Release --tags-file install/cmake/third_party_${{ matrix.versions }} --packages "$THIRDPARTY_PACKAGES"
     - name: Run Tests (static libs)
       env:
         BUILD_SHARED_LIBS: 'OFF'
@@ -134,80 +173,11 @@ jobs:
     - name: Run Tests (shared libs)
       env:
         BUILD_SHARED_LIBS: 'ON'
-      run: ./ci/do_ci.sh cmake.install.test
-
-  ubuntu_2204_stable:
-    name: Ubuntu 22.04 stable versions cxx17 (static libs - shared libs)
-    runs-on: ubuntu-22.04
-    env:
-      INSTALL_TEST_DIR: '/home/runner/install_test'
-      CXX_STANDARD: '17'
-      BUILD_TYPE: 'Debug'
-    steps:
-    - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
-      with:
-        egress-policy: audit
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      with:
-        persist-credentials: false
-        submodules: 'recursive'
-    - name: Setup CI Environment
-      run: |
-        sudo -E ./ci/setup_ci_environment.sh
-    - name: Install Dependencies
-      run: |
-        sudo -E ./ci/install_thirdparty.sh --install-dir /usr/local --tags-file install/cmake/third_party_stable
-    - name: Run Install Functions Tests
-      run: ./ci/do_ci.sh cmake.install_functions.test
-    - name: Run Tests (static libs)
-      env:
-        BUILD_SHARED_LIBS: 'OFF'
-      run: ./ci/do_ci.sh cmake.install.test
-    - name: Run Tests (shared libs)
-      env:
-        BUILD_SHARED_LIBS: 'ON'
-      run: ./ci/do_ci.sh cmake.install.test
-
-  ubuntu_2204_minimum:
-    name: Ubuntu 22.04 minimum versions cxx14 (static libs - shared libs)
-    runs-on: ubuntu-22.04
-    env:
-      INSTALL_TEST_DIR: '/home/runner/install_test'
-      # Set to the current minimum version of cmake
-      CMAKE_VERSION: '3.16.0'
-      # cxx14 is the default for Ubuntu 22.04
-      CXX_STANDARD: '14'
-      BUILD_TYPE: 'Debug'
-    steps:
-    - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
-      with:
-        egress-policy: audit
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      with:
-        persist-credentials: false
-        submodules: 'recursive'
-    - name: Setup CI Environment
-      run: |
-        sudo -E ./ci/setup_ci_environment.sh
-        sudo -E ./ci/setup_cmake.sh
-    - name: Install Dependencies
-      run: |
-        sudo -E ./ci/install_thirdparty.sh --install-dir /usr/local --tags-file install/cmake/third_party_minimum
-    - name: Run Install Functions Tests
-      run: ./ci/do_ci.sh cmake.install_functions.test
-    - name: Run Tests (static libs)
-      env:
-          BUILD_SHARED_LIBS: 'OFF'
-      run: ./ci/do_ci.sh cmake.install.test
-    - name: Run Tests (shared libs)
-      env:
-          BUILD_SHARED_LIBS: 'ON'
       run: ./ci/do_ci.sh cmake.install.test
 
   ubuntu_2404_conan_latest:
     name: Ubuntu 24.04 conan latest versions cxx17 (static libs - opentracing shim)
+    needs: cmake_install_functions
     runs-on: ubuntu-24.04
     env:
       INSTALL_TEST_DIR: '/home/runner/install_test'
@@ -240,8 +210,6 @@ jobs:
             -c '&:tools.build:sharedlinkflags=["-fuse-ld=lld"]'
           conan cache clean --source --build --download --temp
           echo "CMAKE_TOOLCHAIN_FILE=/home/runner/conan/build/Release/generators/conan_toolchain.cmake" >> "$GITHUB_ENV"
-      - name: Run Install Functions Tests
-        run: ./ci/do_ci.sh cmake.install_functions.test
       - name: Run Tests (static libs)
         env:
           BUILD_SHARED_LIBS: 'OFF'
@@ -255,6 +223,7 @@ jobs:
 
   macos_conan_latest:
     name: macOS conan latest versions cxx17 (static libs)
+    needs: cmake_install_functions
     runs-on: macos-26
     env:
       INSTALL_TEST_DIR: '/Users/runner/install_test'
@@ -284,8 +253,6 @@ jobs:
           -c '&:tools.cmake.cmaketoolchain:extra_variables={"CMAKE_JOB_POOLS": "link=2", "CMAKE_JOB_POOL_LINK": "link"}'
         conan cache clean --source --build --download --temp
         echo "CMAKE_TOOLCHAIN_FILE=/Users/runner/conan/build/Release/generators/conan_toolchain.cmake" >> "$GITHUB_ENV"
-    - name: Run Install Functions Tests
-      run: ./ci/do_ci.sh cmake.install_functions.test
     - name: Run Tests (static libs)
       env:
         BUILD_SHARED_LIBS: 'OFF'
@@ -293,6 +260,7 @@ jobs:
 
   macos_brew_packages:
     name: macOS brew latest versions cxx17 (static libs)
+    needs: cmake_install_functions
     runs-on: macos-26
     env:
       INSTALL_TEST_DIR: '/Users/runner/install_test'
@@ -319,8 +287,6 @@ jobs:
         brew install grpc
         brew install nlohmann-json
         brew install prometheus-cpp
-    - name: Run Install Functions Tests
-      run: ./ci/do_ci.sh cmake.install_functions.test
     - name: Run Tests (static libs)
       env:
         BUILD_SHARED_LIBS: 'OFF'
